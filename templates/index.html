@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Netflix Watch Spaces — Synchronized Viewing & AI Co-Pilot</title>
+  <link rel="stylesheet" href="/static/css/styles.css?v=20261124_voice01" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
+  <script>
+    window.__INITIAL_DATA__ = {
+      roomId: "{{ initial_room_id|default:''|escapejs }}",
+      inviteCode: "{{ initial_invite_code|default:''|escapejs }}"
+    };
+  </script>
+</head>
+<body>
+
+  <!-- GLOBAL APPLICATION HEADER -->
+  <header class="main-header">
+    <div class="brand-wrapper">
+      <span class="netflix-logo">NETFLIX</span>
+      <span class="watch-spaces-pill">WATCH SPACES</span>
+      <nav class="nav-links">
+        <span class="nav-link active" data-view="home" onclick="switchView('home')">Home</span>
+        <span class="nav-link" data-view="room" onclick="rejoinActiveRoom()">Watch spaces</span>
+        <span class="nav-link" data-view="studio" onclick="switchView('studio')">Studio</span>
+      </nav>
+    </div>
+
+    <div class="header-right">
+      <div class="live-room-badge" onclick="rejoinActiveRoom()">
+        <span class="live-dot"></span>
+        <span>1 live room</span>
+      </div>
+      <!-- Interactive Expandable Netflix Search Bar -->
+      <div class="search-box-wrapper" id="searchBoxWrapper">
+        <button class="icon-btn search-toggle-btn" id="searchToggleBtn" onclick="toggleHeaderSearch()" title="Search catalog or Netflix">🔍</button>
+        <input type="text" class="header-search-input" id="headerSearchInput" placeholder="Search titles, genres, or Netflix..." oninput="handleHeaderSearch(this.value)" onkeydown="if(event.key==='Enter') executeHeaderSearch()" autocomplete="off" />
+        <button class="search-clear-btn" id="searchClearBtn" onclick="clearHeaderSearch()" style="display:none;">✕</button>
+        <!-- Search Results Dropdown -->
+        <div class="search-results-dropdown" id="searchResultsDropdown" style="display:none;">
+          <div id="searchResultsList"></div>
+          <div id="searchDropdownFooter"></div>
+        </div>
+      </div>
+      <button class="icon-btn" title="Notifications" onclick="showToast('No new notifications')">🔔</button>
+      
+      <!-- Sign In Button for Logged-Out State -->
+      <button class="btn-primary" id="headerSignInBtn" style="display:none; padding: 6px 14px; font-size: 13px; font-weight: 600; border-radius: 4px;" onclick="switchView('auth')">
+        Sign In
+      </button>
+
+      <!-- User Avatar with Login Person Details Dropdown -->
+      <div class="user-avatar-wrapper" id="headerUserWrapper" style="position:relative;">
+        <div class="user-avatar-btn" id="headerAvatarBtn" onclick="toggleUserMenu()" title="Account & Profile">
+          <span id="headerAvatarText">PR</span>
+        </div>
+        <div class="user-menu-dropdown" id="userMenuDropdown" onclick="event.stopPropagation()">
+          <!-- Profile Card -->
+          <div class="dropdown-profile-card">
+            <div class="dropdown-avatar-badge" id="dropdownUserAvatar">PR</div>
+            <div class="dropdown-profile-info">
+              <div class="dropdown-name" id="dropdownUserName">Priya Raman</div>
+              <div class="dropdown-email" id="dropdownUserEmail">priya@netflix.com</div>
+              <div class="dropdown-badge-chip" id="dropdownUserRole">Host · Engineering Lead</div>
+            </div>
+          </div>
+
+          <!-- Account Details Section (Only Logged-In Person) -->
+          <div class="dropdown-details-box">
+            <div class="dropdown-detail-row">
+              <span class="detail-label">Status</span>
+              <span class="detail-val status-online"><span class="status-dot">●</span> Online</span>
+            </div>
+            <div class="dropdown-detail-row">
+              <span class="detail-label">Membership</span>
+              <span class="detail-val" id="dropdownUserPlan">Ultra HD 4K · 4 Streams</span>
+            </div>
+            <div class="dropdown-detail-row">
+              <span class="detail-label">Account ID</span>
+              <span class="detail-val mono" id="dropdownUserId">u_501</span>
+            </div>
+            <div class="dropdown-detail-row">
+              <span class="detail-label">Audio & Subs</span>
+              <span class="detail-val" id="dropdownUserLocale">English (en-US)</span>
+            </div>
+          </div>
+
+          <div class="dropdown-divider"></div>
+
+          <!-- Personal Actions -->
+          <div class="dropdown-item" onclick="switchView('summary', 'ws_88231'); toggleUserMenu();">
+            <span class="item-icon">📊</span>
+            <span>Session Wrapped Report</span>
+          </div>
+          <div class="dropdown-item" onclick="openAccountSettingsModal(); toggleUserMenu();">
+            <span class="item-icon">⚙️</span>
+            <span>Account & Profile Settings</span>
+          </div>
+
+          <div class="dropdown-divider"></div>
+
+          <div class="dropdown-item dropdown-logout-item" onclick="logoutCurrentUser();">
+            <span class="item-icon">🚪</span>
+            <span>Sign Out of Watch Spaces</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======================================================================
+       VIEW 1: HOME DASHBOARD
+       ====================================================================== -->
+  <main id="view-home" class="view-container">
+    <!-- Hero Banner -->
+    <section class="hero-section" id="heroSection">
+      <div class="hero-overlay-radial"></div>
+
+      <div class="hero-content">
+        <div class="hero-tag">
+          <span class="n-red-letter">N</span>
+          <span id="heroTagText">NETFLIX ORIGINAL · LIMITED SERIES · NEW SEASON</span>
+        </div>
+        <h1 class="hero-title" id="heroTitle">Stranger Things</h1>
+        <div class="hero-meta" id="heroMeta">
+          <span class="meta-match">98% match</span>
+          <span class="meta-text">2024</span>
+          <span class="meta-badge">TV-MA</span>
+          <span class="meta-text">9 episodes</span>
+          <span class="meta-badge">4K UHD</span>
+          <span class="meta-text">Sci-Fi · Horror · Drama</span>
+        </div>
+        <p class="hero-synopsis" id="heroSynopsis">
+          When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces and one strange little girl.
+        </p>
+        <div class="hero-actions">
+          <button class="btn-primary" id="heroStartSpaceBtn" onclick="openCreateModalWithHero()">
+            <span>✦</span> Start a watch space
+          </button>
+          <button class="btn-secondary" onclick="openJoinModal()">
+            <span>👥</span> Join with a code
+          </button>
+        </div>
+        <div class="hero-tagline">
+          <span class="dot">●</span>
+          <span>Live sync · grounded AI co-pilot · invite up to 50 friends</span>
+        </div>
+      </div>
+
+      <!-- Floating Circle Widget -->
+      <div class="circle-widget">
+        <div class="circle-header">Your Circle</div>
+        <div class="circle-body">
+          <div class="avatar-pile">
+            <div class="avatar-chip" style="background:#EAB308;">MA</div>
+            <div class="avatar-chip" style="background:#3B82F6;">DV</div>
+            <div class="avatar-chip" style="background:#EC4899;">SO</div>
+            <div class="avatar-chip" style="background:#10B981;">MC</div>
+          </div>
+          <div class="circle-info">
+            <div class="headline">4 friends are free tonight</div>
+            <div class="subline">Maya rated this 5★</div>
+          </div>
+        </div>
+        <div class="circle-footer">
+          <span>Plan a room for 9:00 PM</span>
+          <span class="action-link" onclick="openCreateModal()">Set up &gt;</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Active Room Strip (Rejoin Banner) -->
+    <div class="active-room-strip" id="activeRoomBanner">
+      <div class="active-room-left">
+        <img src="/static/images/backdrop-stranger-things.svg" alt="Active Room Thumb" class="room-thumb" />
+        <div>
+          <div class="active-status-pills">
+            <span class="pill-live"><span class="live-dot"></span> LIVE NOW</span>
+            <span class="pill-privacy">INVITE ONLY</span>
+          </div>
+          <div class="active-room-title" id="activeRoomTitle">Stranger Things Hawkins Space · Stranger Things · S4 E1</div>
+          <div class="active-room-meta" id="activeRoomMeta">Hosted by you · 5 watching · 00:00 into the episode</div>
+        </div>
+      </div>
+      <div class="active-room-right">
+        <div class="avatar-pile">
+          <div class="avatar-chip" style="background:#E50914;">PR</div>
+          <div class="avatar-chip" style="background:#EAB308;">MA</div>
+          <div class="avatar-chip" style="background:#3B82F6;">DV</div>
+          <div class="avatar-chip" style="background:#EC4899;">SO</div>
+          <span style="font-size:11px; color:var(--text-muted); margin-left:12px; align-self:center;">and 1 more</span>
+        </div>
+        <button class="btn-dark" onclick="openJoinModal()">Join another room</button>
+        <button class="btn-rejoin" onclick="rejoinActiveRoom()">Rejoin room &gt;</button>
+      </div>
+    </div>
+
+    <!-- Section: Recommended for you (AI Personalized) -->
+    <section class="content-section">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <h2 class="section-title">Recommended for you</h2>
+          <span class="badge-ai">✦ AI PERSONALIZED</span>
+          <span class="section-subtext">Updated from your last 3 sessions</span>
+        </div>
+        <span class="see-all-link" onclick="showToast('Viewing full recommendations catalog')">See all &gt;</span>
+      </div>
+      <div class="cards-rail" id="recommendedRail">
+        <!-- Injected via JavaScript -->
+      </div>
+    </section>
+
+    <!-- Section: Top 10 Today on Netflix -->
+    <section class="content-section">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <h2 class="section-title">Top 10 Today on Netflix</h2>
+          <span class="badge-ai" style="background:#E50914; color:#fff;">TOP 10</span>
+          <span class="section-subtext">Most watched in group spaces today</span>
+        </div>
+      </div>
+      <div class="top10-rail" id="top10Rail">
+        <!-- Injected via JavaScript -->
+      </div>
+    </section>
+
+    <!-- Section: Upcoming Watch Spaces -->
+    <section class="content-section">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <h2 class="section-title">Upcoming watch spaces</h2>
+          <span class="section-subtext">3 scheduled this week</span>
+        </div>
+        <span class="see-all-link" onclick="showToast('Manage scheduled watch spaces')">Manage &gt;</span>
+      </div>
+      <div class="schedule-rail" id="upcomingSpacesRail">
+        <!-- Injected via JavaScript with initial fallback -->
+        <div class="schedule-card" onclick="openCreateModalWithTitle('t_stranger_things')">
+          <div class="date-badge">
+            <div class="date-num">22</div>
+            <div class="date-month">NOV</div>
+            <div class="date-day">Sat</div>
+          </div>
+          <div class="schedule-details">
+            <div class="sched-top">
+              <span style="color:#A3A3B2;">INVITE ONLY</span> · <span>9:00 PM</span>
+            </div>
+            <div class="sched-room-name">Hawkins Mystery Club</div>
+            <div class="sched-host">Stranger Things · Hosted by Maya</div>
+            <div class="sched-footer">
+              <div class="avatar-pile">
+                <div class="avatar-chip" style="background:#EAB308;">MA</div>
+                <div class="avatar-chip" style="background:#3B82F6;">DV</div>
+                <span style="font-size:11px; color:var(--text-muted); margin-left:10px;">5 going</span>
+              </div>
+              <button class="btn-remind" onclick="event.stopPropagation(); showToast('Reminder set for Hawkins Mystery Club')">Remind me</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="schedule-card" onclick="openCreateModalWithTitle('t_jailer')">
+          <div class="date-badge">
+            <div class="date-num">24</div>
+            <div class="date-month">NOV</div>
+            <div class="date-day">Mon</div>
+          </div>
+          <div class="schedule-details">
+            <div class="sched-top">
+              <span style="color:#A3A3B2;">OPEN LINK</span> · <span>8:30 PM</span>
+            </div>
+            <div class="sched-room-name">Tiger Mass Watch FDS</div>
+            <div class="sched-host">Jailer · Hosted by Dev</div>
+            <div class="sched-footer">
+              <div class="avatar-pile">
+                <div class="avatar-chip" style="background:#3B82F6;">DV</div>
+                <div class="avatar-chip" style="background:#10B981;">MC</div>
+                <span style="font-size:11px; color:var(--text-muted); margin-left:10px;">9 going</span>
+              </div>
+              <button class="btn-remind" onclick="event.stopPropagation(); showToast('Reminder set for Jailer')">Remind me</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="schedule-card" onclick="openCreateModalWithTitle('t_squid_game')">
+          <div class="date-badge">
+            <div class="date-num">27</div>
+            <div class="date-month">NOV</div>
+            <div class="date-day">Thu</div>
+          </div>
+          <div class="schedule-details">
+            <div class="sched-top">
+              <span style="color:#A3A3B2;">INVITE ONLY</span> · <span>10:00 PM</span>
+            </div>
+            <div class="sched-room-name">Front Man's Chamber</div>
+            <div class="sched-host">Squid Game · Hosted by Sofia</div>
+            <div class="sched-footer">
+              <div class="avatar-pile">
+                <div class="avatar-chip" style="background:#EC4899;">SO</div>
+                <div class="avatar-chip" style="background:#EAB308;">MA</div>
+                <span style="font-size:11px; color:var(--text-muted); margin-left:10px;">6 going</span>
+              </div>
+              <button class="btn-remind" onclick="event.stopPropagation(); showToast('Reminder set for Squid Game')">Remind me</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section: Continue Watching -->
+    <section class="content-section" style="margin-bottom: 60px;">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <h2 class="section-title">Continue watching</h2>
+          <span class="section-subtext">Pick up where you left off</span>
+        </div>
+      </div>
+      <div class="continue-rail" id="continueWatchingRail">
+        <div class="continue-card" onclick="openCreateModalWithTitle('t_jailer')">
+          <div class="continue-thumb-wrap">
+            <img src="/static/images/backdrop-jailer.svg" alt="Jailer" class="continue-thumb" />
+            <div class="play-circle-overlay">
+              <div class="play-icon-circle">▶</div>
+            </div>
+          </div>
+          <div class="continue-progress-bar">
+            <div class="progress-fill" style="width: 48%;"></div>
+          </div>
+          <div class="continue-info">
+            <div>
+              <div class="cont-title">Jailer</div>
+              <div class="cont-ep">Feature Film</div>
+            </div>
+            <div class="cont-time">1h 12m left</div>
+          </div>
+        </div>
+
+        <div class="continue-card" onclick="openCreateModalWithTitle('t_stranger_things')">
+          <div class="continue-thumb-wrap">
+            <img src="/static/images/backdrop-stranger-things.svg" alt="Stranger Things" class="continue-thumb" />
+            <div class="play-circle-overlay">
+              <div class="play-icon-circle">▶</div>
+            </div>
+          </div>
+          <div class="continue-progress-bar">
+            <div class="progress-fill" style="width: 68%;"></div>
+          </div>
+          <div class="continue-info">
+            <div>
+              <div class="cont-title">Stranger Things</div>
+              <div class="cont-ep">S4 · E1 "The Hellfire Club"</div>
+            </div>
+            <div class="cont-time">24m left</div>
+          </div>
+        </div>
+
+        <div class="continue-card" onclick="openCreateModalWithTitle('t_squid_game')">
+          <div class="continue-thumb-wrap">
+            <img src="/static/images/backdrop-squid-game.svg" alt="Squid Game" class="continue-thumb" />
+            <div class="play-circle-overlay">
+              <div class="play-icon-circle">▶</div>
+            </div>
+          </div>
+          <div class="continue-progress-bar">
+            <div class="progress-fill" style="width: 72%;"></div>
+          </div>
+          <div class="continue-info">
+            <div>
+              <div class="cont-title">Squid Game</div>
+              <div class="cont-ep">S2 · E1 "Red Light, Green Light"</div>
+            </div>
+            <div class="cont-time">18m left</div>
+          </div>
+        </div>
+
+        <div class="continue-card" onclick="switchView('room')">
+          <div class="continue-thumb-wrap">
+            <img src="/static/images/salt-road-backdrop.jpg" alt="The Salt Road" class="continue-thumb" />
+            <div class="play-circle-overlay">
+              <div class="play-icon-circle">▶</div>
+            </div>
+          </div>
+          <div class="continue-progress-bar">
+            <div class="progress-fill" style="width: 28%;"></div>
+          </div>
+          <div class="continue-info">
+            <div>
+              <div class="cont-title">The Salt Road</div>
+              <div class="cont-ep">S1 · E4 "The Crossing"</div>
+            </div>
+            <div class="cont-time">38m left</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="padding: 30px 48px; border-top: 1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--text-muted);">
+      <div>
+        <span style="color:var(--primary-red); font-weight:800;">NETFLIX</span>
+        <span> Watch Spaces · Python Django & SQL Database · Grounded AI Co-Pilot & WebSockets</span>
+      </div>
+      <div style="display:flex; gap:20px;">
+        <span style="cursor:pointer;" onclick="switchView('studio')">Content Studio</span>
+        <span style="cursor:pointer;" onclick="switchView('summary', 'ws_88231')">Session Wrapped</span>
+        <span style="cursor:pointer;" onclick="switchView('auth')">Sign in</span>
+      </div>
+    </footer>
+  </main>
+
+  <!-- ======================================================================
+       VIEW 2: LIVE WATCH ROOM (SYNCHRONIZATION & AI CO-PILOT)
+       ====================================================================== -->
+  <main id="view-room" class="view-container watch-room-container" style="display:none;">
+    <!-- Room Top Bar -->
+    <header class="room-top-bar">
+      <div class="room-header-left">
+        <button class="back-btn" onclick="switchView('home')" title="Back to Home">←</button>
+        <div class="room-title-info">
+          <div class="room-main-title" id="roomHeaderTitle">Friday Noir Club · Hosted by Priya</div>
+          <div class="room-sub-title" id="roomSubTitle">The Salt Road · S1:E4 NX-4Q7K</div>
+        </div>
+        <div class="sync-status-indicator" id="topSyncIndicator">
+          <span class="live-dot"></span>
+          <span>In sync · 37 ms</span>
+        </div>
+      </div>
+
+      <div class="room-header-right">
+        <!-- Room Voice Chat Header Island -->
+        <div class="voice-header-island" id="roomVoiceIsland">
+          <button type="button" class="voice-pill-btn connected" id="voiceToggleConnectBtn" onclick="toggleVoiceConnection()" title="Voice Channel Status (Click to connect/disconnect)">
+            <span class="voice-pulse-dot"></span>
+            <span id="voiceStatusText">Voice (4)</span>
+          </button>
+          <button type="button" class="voice-ctrl-icon-btn active" id="voiceMicBtn" onclick="toggleVoiceMic()" title="Mute/Unmute Mic (Shortcut: M)">
+            <span id="voiceMicIcon">🎤</span>
+          </button>
+          <button type="button" class="voice-ctrl-icon-btn" id="voiceDeafenBtn" onclick="toggleVoiceDeafen()" title="Deafen / Undeafen Audio (Shortcut: D)">
+            <span id="voiceDeafenIcon">🎧</span>
+          </button>
+        </div>
+
+        <div class="avatar-pile" id="topAvatarsPile">
+          <!-- Injected via JS -->
+        </div>
+        <span class="watching-counter" id="roomWatchingCount">5 watching</span>
+        <button class="btn-end-session" onclick="endWatchSession()">End session</button>
+      </div>
+    </header>
+
+    <!-- Split Layout: Video Player + Sidebar -->
+    <div class="room-split-layout">
+      <!-- Left Stage: Video Player -->
+      <section class="player-stage">
+        <div class="video-container" id="playerVideoContainer">
+          <div class="video-element-wrapper" id="videoElementWrapper">
+            <!-- 1. Native Direct HTML5 Movie Player (Zero-CORS, In-App Streaming) -->
+            <video
+              id="playerHtml5Video"
+              class="player-video-media"
+              playsinline
+              preload="auto"
+              poster="/static/images/backdrop-stranger-things.svg"
+              onended="handleVideoEnded()"
+              ontimeupdate="handleHtml5TimeUpdate()"
+              onclick="togglePlayPause()">
+              <source id="playerHtml5Source" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4" type="video/mp4" />
+            </video>
+
+            <!-- 2. Cinematic Dynamic Stage Canvas -->
+            <canvas id="playerLiveCanvas" class="player-live-canvas" style="display:none;"></canvas>
+
+            <!-- 3. Ambient Movie Backdrop Poster -->
+            <img src="/static/images/backdrop-stranger-things.svg" alt="Video Frame" class="player-bg-image" id="playerBgImage" style="display:none;" />
+
+            <!-- Video Source Selector Pill Bar -->
+            <div class="player-source-selector-bar" id="playerSourceSelectorBar">
+              <a href="https://www.netflix.com/watch/80057281" target="_blank" class="source-pill btn-netflix-open" id="directNetflixLinkBtn" title="Open and watch directly on Netflix.com with your Netflix account">
+                <span class="n-logo-icon">N</span> <span>Watch on Netflix.com ↗</span>
+              </a>
+              <button class="source-pill active" id="srcBtn_html5" onclick="switchVideoSource('html5')" title="Play Direct In-App Video">
+                <span>▶ Direct Player</span>
+              </button>
+              <button class="source-pill" id="srcBtn_backdrop" onclick="switchVideoSource('backdrop')" title="Cinematic Ambient Stage">
+                <span>✦ Cinematic Stage</span>
+              </button>
+              <button class="source-pill" id="srcBtn_local" onclick="triggerLocalVideoUpload()" title="Load your local movie file (.mp4, .mkv, .webm) into this Watch Space">
+                <span>📁 Open Movie File</span>
+              </button>
+              <input type="file" id="localVideoFileInput" accept="video/mp4,video/webm,video/ogg,video/mkv" style="display:none;" onchange="handleLocalVideoUpload(event)" />
+            </div>
+
+            <!-- Big Center Play / Unmute Gesture Overlay -->
+            <div class="player-center-state-indicator" id="centerPlayOverlay" style="display:none;" onclick="handleCenterPlayClick()">
+              <div class="center-play-circle">
+                <span id="centerPlayIcon">▶</span>
+              </div>
+              <div class="center-play-label">Click to play movie</div>
+            </div>
+
+            <!-- Overlaid Player Badges -->
+            <div class="player-top-left-badge">
+              <span class="live-pill-red">LIVE</span>
+              <span class="player-ep-pill" id="playerEpPill">S4 · E1 "CHAPTER ONE: THE HELLFIRE CLUB"</span>
+            </div>
+            <div class="player-top-right-watching">
+              <span>👥</span> <span id="playerWatchingCountBadge">5 WATCHING</span>
+            </div>
+
+            <!-- Dynamic Subtitle Bar -->
+            <div class="player-subtitles-box" id="playerSubtitleBox">
+              <span id="subtitleText">"Hawkins National Laboratory. November 6, 1983."</span>
+              <span class="badge-alt-sub" id="badgeAltSub" title="Switch variation" onclick="toggleAltSubtitle()">ALT</span>
+            </div>
+
+            <!-- Floating Voice Speaker Overlay on Video Player -->
+            <div class="floating-voice-speaker-badge" id="playerVoiceSpeakerBadge" style="display:none;">
+              <span class="speaker-sound-wave">
+                <span></span><span></span><span></span>
+              </span>
+              <span id="playerVoiceSpeakerText">Maya is speaking...</span>
+            </div>
+
+            <!-- Floating Trivia Card -->
+            <div class="floating-trivia-card" id="floatingTriviaCard">
+              <div class="trivia-card-top">
+                <span class="trivia-badge">✦ TRIVIA · SCENE MARKER</span>
+                <button class="btn-close-card" onclick="hideTriviaCard()">✕</button>
+              </div>
+              <div class="trivia-content" id="triviaCardContent">
+                The Duffer Brothers used vintage 1980s Leica Summilux lenses to capture period optical flare.
+              </div>
+              <div class="trivia-footer">
+                <span class="btn-pin-trivia" onclick="pinCurrentTriviaToChat()">📌 Pin to chat</span>
+                <span id="triviaCardMeta">evt_st_03 · 00:08:00</span>
+              </div>
+            </div>
+
+            <!-- Floating Variation Point Modal -->
+            <div class="variation-vote-overlay" id="variationVoteModal" style="display:none;">
+              <div class="vote-top">
+                <span class="vote-badge" id="variationVoteBadge">≡ VARIATION POINT · 00:20:00</span>
+                <span class="vote-timer-pill" id="voteCountdownPill">00:18</span>
+              </div>
+              <div class="vote-title" id="variationVoteTitle">Choose tonight's audio line.</div>
+              <div class="vote-desc" id="variationVoteDesc">
+                Both options are pre-approved by the host. The winner is applied to all viewers at the same timestamp — zero desync.
+              </div>
+              <div class="vote-options-list" id="variationVoteOptionsList">
+                <div class="vote-option-btn selected" data-option="a" onclick="castVote('a')">
+                  <div class="vote-opt-left">
+                    <span class="vote-key-badge">A</span>
+                    <span class="vote-opt-text" id="voteOptText_a">Classic 1980s synthwave broadcast</span>
+                  </div>
+                  <span class="vote-percentage-label" id="votePct_a">60%</span>
+                  <div class="vote-progress-fill" id="voteProgress_a" style="width:60%;"></div>
+                </div>
+
+                <div class="vote-option-btn" data-option="b" onclick="castVote('b')">
+                  <div class="vote-opt-left">
+                    <span class="vote-key-badge">B</span>
+                    <span class="vote-opt-text" id="voteOptText_b">Emergency radio frequency alert signal</span>
+                  </div>
+                  <span class="vote-percentage-label" id="votePct_b">40%</span>
+                  <div class="vote-progress-fill" id="voteProgress_b" style="width:40%;"></div>
+                </div>
+              </div>
+              <div class="vote-footer-info">
+                <span>✓ Applied to everyone · playback uninterrupted</span>
+                <span id="voteHostName">Host: Priya</span>
+              </div>
+            </div>
+
+            <!-- Host Offline Drop Warning Banner (Failover Simulation) -->
+            <div class="host-down-banner" id="hostDownBanner" style="display:none;">
+              <span>⚠</span>
+              <div class="host-down-text">
+                Your host connection dropped. Playback is paused for everyone. Auto-promoting Maya in <strong id="hostDownCountdown">12s</strong>.
+              </div>
+              <button class="btn-promote-now" onclick="promoteHostCandidate()">Promote Maya</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Player Controls Bar -->
+        <div class="player-controls-bar">
+          <div class="scrubber-track" id="playerScrubberTrack" onclick="handleScrubberSeek(event)">
+            <div class="scrubber-fill" id="scrubberFill" style="width: 0%;">
+              <div class="scrubber-handle"></div>
+            </div>
+            <!-- Authored marker ticks -->
+            <div id="scrubberMarkersContainer">
+              <div class="scrubber-marker" style="left: 10.5%;" title="00:08:00 Trivia marker"></div>
+              <div class="scrubber-marker" style="left: 26.3%;" title="00:20:00 Variation point"></div>
+            </div>
+          </div>
+
+          <div class="controls-buttons-row">
+            <div class="controls-left">
+              <button class="play-toggle-btn" id="playToggleBtn" onclick="togglePlayPause()" title="Play / Pause">❚❚</button>
+              <button class="icon-btn" onclick="seekRelative(-10)" title="Rewind 10s">↺ 10</button>
+              <button class="icon-btn" onclick="seekRelative(10)" title="Forward 10s">10 ↻</button>
+              <span class="time-display" id="playerTimeDisplay">00:00:00 / 01:16:00</span>
+              <a href="https://www.netflix.com/watch/80057281" id="controlsNetflixDirectLink" target="_blank" class="btn-netflix-mini" title="Open and watch directly on Netflix.com">
+                <span class="n-logo-icon">N</span> Watch on Netflix ↗
+              </a>
+            </div>
+            <div class="controls-right">
+              <span class="drift-badge" id="driftBadge">● In sync · 24 ms</span>
+              <button class="icon-btn" id="audioToggleBtn" title="Ambient Soundtrack Synth" onclick="toggleAudioSynth()">🔊</button>
+              <button class="icon-btn" title="Subtitles" onclick="toggleAltSubtitle()">CC</button>
+              <button class="icon-btn" title="Settings" onclick="showToast('Playback resolution: 4K Ultra HD')">⚙</button>
+              <button class="icon-btn" title="Fullscreen" onclick="toggleFullscreen()">⛶</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Host Action Bar Below Video -->
+        <div class="host-action-strip">
+          <div class="host-action-buttons">
+            <button class="host-cmd-btn primary" id="hostPauseBtn" onclick="togglePlayPause()">
+              <span id="hostPauseIcon">❚❚</span> <span id="hostPauseLabel">Pause for everyone</span>
+            </button>
+            <button class="host-cmd-btn" id="hostTriviaBtn" onclick="triggerMovieTrivia()">
+              <span>✦</span> Trivia
+            </button>
+            <button class="host-cmd-btn" onclick="triggerVariationPointVote()">
+              <span>≡</span> Variation vote
+            </button>
+            <button class="host-cmd-btn" onclick="showToast('Room locked: No new viewers can join')">
+              <span>🔒</span> Lock room
+            </button>
+            <button class="host-cmd-btn" title="Simulate Host Drop" onclick="simulateHostDrop()">
+              <span>⚡</span> Simulate Drop
+            </button>
+          </div>
+          <div class="avatar-pile" id="hostStripAvatarPile">
+            <div class="avatar-chip" style="background:#E50914;">PR</div>
+            <div class="avatar-chip" style="background:#EAB308;">MA</div>
+            <div class="avatar-chip" style="background:#3B82F6;">DV</div>
+            <div class="avatar-chip" style="background:#EC4899;">SO</div>
+            <div class="avatar-chip" style="background:#10B981;">MC</div>
+            <span style="font-size:12px; color:var(--text-muted); margin-left:10px; align-self:center;">5 watching</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Sidebar: Chat / Co-Pilot / People -->
+      <aside class="room-sidebar">
+        <div class="sidebar-tabs">
+          <button class="tab-btn active" data-tab="chat">
+            <span>Chat</span>
+            <span class="tab-badge" id="chatBadgeCount">23</span>
+          </button>
+          <button class="tab-btn" data-tab="voice" id="sidebarTabVoice">
+            <span>🎙 Voice</span>
+            <span class="tab-badge voice-tab-badge" id="voiceTabBadge">4</span>
+          </button>
+          <button class="tab-btn" data-tab="copilot">
+            <span>Co-Pilot</span>
+          </button>
+          <button class="tab-btn" data-tab="people">
+            <span>People</span>
+            <span style="font-size:11px; color:var(--text-muted);">5</span>
+          </button>
+        </div>
+
+        <!-- Tab 1: Chat Stream -->
+        <div class="sidebar-tab-content" id="tabContent-chat">
+          <div class="chat-messages-container" id="chatMessagesStream">
+            <!-- Messages dynamically loaded via JS -->
+          </div>
+          <div class="chat-input-wrapper">
+            <div class="chat-input-pill-row">
+              <button class="btn-toggle-ai-ask" id="toggleAiAskBtn">
+                <span>✦</span> Ask AI
+              </button>
+              <span class="input-subtext">Everyone in the room can see this</span>
+            </div>
+            <form class="chat-form" onsubmit="submitChat(event)">
+              <input type="text" class="chat-input" id="chatInput" placeholder="Message the room..." autocomplete="off" />
+              <button type="submit" class="btn-send-chat">➤</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Tab 2: Co-Pilot Scene Context & Q&A -->
+        <div class="sidebar-tab-content" id="tabContent-copilot" style="display:none;">
+          <div class="copilot-tab-scroll">
+            <div class="scene-context-card">
+              <div class="context-header">
+                <span>✦ SCENE CONTEXT</span>
+                <span>NOW 13:33</span>
+              </div>
+              <h3 class="scene-h2" id="sceneTitle">The crossing — Ilse leaves the marked route</h3>
+              <div class="context-row">
+                <span class="context-label">Location</span>
+                <span class="context-val" id="sceneLocation">Salar de Uyuni · night exterior</span>
+              </div>
+              <div class="context-row">
+                <span class="context-label">On screen</span>
+                <span class="context-val" id="sceneOnScreen">Ilse, Detective Rios</span>
+              </div>
+              <div class="context-row">
+                <span class="context-label">Glossary</span>
+                <span class="context-val" id="sceneGlossary">"The Salt Road" — smuggling route</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="chips-section-title">Ask about this moment</div>
+              <div class="chips-cloud" id="promptChipsCloud">
+                <!-- Prompt chips loaded dynamically -->
+              </div>
+            </div>
+
+            <div>
+              <div class="chips-section-title">This session</div>
+              <div class="copilot-bubble-card" style="margin-top:4px;">
+                <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">
+                  Sofia asked: <em>"Who is the woman with the red thread?"</em>
+                </div>
+                <div class="chat-bubble-text" style="font-size:12px;">
+                  That's Ilse, the courier. The red thread is her continuity marker — it appears in the opening and again at 00:09:14, which is how Rios recognises her later.
+                </div>
+                <div class="copilot-footer-badges">
+                  <span class="badge-grounded">✓ Grounded</span>
+                  <span style="font-size:10px; color:var(--text-muted);">evt_2291, evt_2344</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="chat-input-wrapper">
+            <form class="chat-form" onsubmit="event.preventDefault(); askCopilotPrompt(document.getElementById('copilotQueryInput').value); document.getElementById('copilotQueryInput').value='';">
+              <input type="text" class="chat-input" id="copilotQueryInput" placeholder="Ask the co-pilot about this scene..." autocomplete="off" />
+              <button type="submit" class="btn-send-chat" style="background:#8B5CF6;">✦</button>
+            </form>
+            <div style="font-size:10px; color:var(--text-muted); text-align:center; margin-top:6px;">
+              Answers come only from this title's authored metadata — never open-ended.
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: People & Moderation -->
+        <div class="sidebar-tab-content" id="tabContent-people" style="display:none;">
+          <div class="people-tab-scroll" id="peopleListContainer">
+            <!-- People rows loaded dynamically -->
+          </div>
+          <div style="padding: 16px;">
+            <div class="rbac-warning-box">
+              <span>🔒</span>
+              <span>Only the host can mute or remove participants. Enforced server-side by role.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Live Voice Channel -->
+        <div class="sidebar-tab-content" id="tabContent-voice" style="display:none;">
+          <!-- Voice Channel Header Card -->
+          <div class="voice-channel-card">
+            <div class="voice-channel-top">
+              <div class="voice-channel-info">
+                <div class="voice-channel-title">
+                  <span class="voice-live-dot"></span>
+                  <span>Space Voice Stage</span>
+                </div>
+                <div class="voice-channel-meta" id="voiceChannelMeta">
+                  4 Connected · WebRTC Low-Latency (18ms)
+                </div>
+              </div>
+              <button type="button" class="btn-disconnect-voice" id="btnDisconnectVoice" onclick="toggleVoiceConnection()">
+                Leave Voice
+              </button>
+            </div>
+            <div class="voice-action-bar">
+              <button type="button" class="voice-action-pill active" id="voiceTabMicBtn" onclick="toggleVoiceMic()">
+                <span id="voiceTabMicIcon">🎤</span> <span id="voiceTabMicLabel">Mute</span>
+              </button>
+              <button type="button" class="voice-action-pill" id="voiceTabDeafenBtn" onclick="toggleVoiceDeafen()">
+                <span id="voiceTabDeafenIcon">🎧</span> <span id="voiceTabDeafenLabel">Deafen</span>
+              </button>
+              <button type="button" class="voice-action-pill" onclick="simulateParticipantSpeaking()">
+                <span>⚡</span> <span>Simulate Talk</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Voice Participants Grid -->
+          <div class="voice-participants-scroll" id="voiceParticipantsGrid">
+            <!-- Dynamically populated via JS -->
+          </div>
+
+          <!-- Voice Channel Audio Settings -->
+          <div class="voice-settings-strip">
+            <div class="voice-setting-row">
+              <label for="voiceModeSelect" style="font-size:11px; font-weight:700; color:#A1A1AA;">INPUT MODE</label>
+              <select id="voiceModeSelect" class="voice-select" onchange="changeVoiceInputMode(this.value)">
+                <option value="vad" selected>Voice Activity (Auto)</option>
+                <option value="ptt">Push-to-Talk (Hold Space)</option>
+              </select>
+            </div>
+            <div class="voice-setting-row">
+              <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <label style="font-size:11px; font-weight:700; color:#A1A1AA;">MIC LEVEL</label>
+                <span id="voiceLiveDbLabel" style="font-size:10px; color:#10B981;">Active</span>
+              </div>
+              <div class="voice-meter-bar-track">
+                <div class="voice-meter-bar-fill" id="voiceLiveMeterFill" style="width: 15%;"></div>
+              </div>
+            </div>
+            <div class="voice-setting-row" style="margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:11px; color:#A1A1AA;">Spatial Audio &amp; Echo Cancellation</span>
+              <span class="badge-ai" style="font-size:10px; background:rgba(16,185,129,0.15); color:#10B981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:10px;">ACTIVE</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- ======================================================================
+       VIEW 3: PLATFORM - CONTENT STUDIO (ADMIN TIMELINE VALIDATOR)
+       ====================================================================== -->
+  <main id="view-studio" class="view-container studio-view" style="display:none;">
+    <div class="studio-header">
+      <div class="studio-tag">Platform · Content Studio</div>
+      <h1 class="studio-title">Author what the co-pilot knows.</h1>
+      <p class="studio-subtext">
+        Upload and validate a title's metadata timeline — scene markers, characters, glossary terms and variation points — without touching raw files.
+      </p>
+    </div>
+
+    <div class="studio-top-actions">
+      <div class="badge-admin-enforced">
+        <span>🔒</span> ADMIN ONLY · ENFORCED SERVER-SIDE
+      </div>
+      <button class="btn-primary" onclick="openNetflixImportModal()">
+        <span>✦</span> + Import from Netflix
+      </button>
+    </div>
+
+    <div class="studio-split-grid">
+      <!-- Left: Title Timeline Events Table -->
+      <div class="studio-main-card">
+        <div class="studio-title-badge-row">
+          <div class="title-card-left">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:4px;">
+              <select id="studioTitleSelect" class="form-input" style="padding:4px 10px; font-weight:700; font-size:15px; background:#1C1C26; border-color:var(--border-medium);" onchange="switchStudioTitle(this.value)">
+                <option value="t_1001">The Salt Road · S1 E4 "The Crossing"</option>
+              </select>
+              <button class="btn-dark" style="font-size:11px; padding:4px 8px;" onclick="openNetflixImportModal()">+ Add Netflix Movie</button>
+            </div>
+            <div class="meta" id="studioTitleMeta">45:30 runtime · 42 timeline events · Last edited 6m ago by Priya</div>
+          </div>
+          <div class="title-card-badges">
+            <span class="badge-status-published">● PUBLISHED</span>
+            <span class="badge-schema-v">SCHEMA V1.2</span>
+            <span class="badge-schema-v" id="studioVariationsCountBadge">3 VARIATION POINTS</span>
+          </div>
+        </div>
+
+        <div class="events-filter-bar">
+          <div class="filter-pills-row">
+            <button class="filter-pill active" data-type="all" onclick="loadContentStudio('all')">All 42</button>
+            <button class="filter-pill" data-type="trivia" onclick="loadContentStudio('trivia')">Trivia 15</button>
+            <button class="filter-pill" data-type="character" onclick="loadContentStudio('character')">Characters 9</button>
+            <button class="filter-pill" data-type="variation_point" onclick="loadContentStudio('variation_point')">Variations 3</button>
+            <button class="filter-pill" data-type="glossary" onclick="loadContentStudio('glossary')">Glossary 15</button>
+          </div>
+          <button class="btn-dark" onclick="showToast('Add timeline event dialog opened')">+ Add event</button>
+        </div>
+
+        <div class="timeline-table-wrap">
+          <table class="timeline-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Type</th>
+                <th>Content</th>
+                <th>Source</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="studioEventsTbody">
+              <!-- Dynamically populated from SQLite -->
+            </tbody>
+          </table>
+        </div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:14px; display:flex; justify-content:space-between;">
+          <span>Showing 42 of 42 events · timestamps indexed for range queries</span>
+          <span>Auto-saved 2m ago</span>
+        </div>
+      </div>
+
+      <!-- Right: Upload & Validate Timeline Panel -->
+      <div class="studio-side-panel">
+        <div class="upload-card">
+          <h3 class="upload-h3">Upload timeline</h3>
+          <p class="upload-sub">JSON or YAML · validated against schema v1.2</p>
+
+          <div class="drop-zone" onclick="loadValidStudioExample()">
+            <div class="drop-icon">📄</div>
+            <div class="drop-main">Drop a timeline file</div>
+            <div class="drop-sub">or browse · max 2 MB</div>
+          </div>
+
+          <div class="file-pill">
+            <div class="file-pill-left">
+              <span>📄</span>
+              <span id="studioFileName">salt-road.s104.json</span>
+            </div>
+            <button class="icon-btn" onclick="showToast('Removed file')">✕</button>
+          </div>
+
+          <!-- Validation State Card (Toggleable Valid/Malformed) -->
+          <div class="validation-result-box" id="studioValidationResult">
+            <div class="val-status-header">✓ Schema valid</div>
+            <ul class="val-details-list">
+              <li>✓ 42 events parsed across 4 types.</li>
+              <li>✓ All timestamps fall within the 45:30 runtime.</li>
+              <li>✓ 3 variation points reference approved asset variants.</li>
+            </ul>
+          </div>
+
+          <div class="val-actions-row">
+            <button class="btn-load-example" onclick="loadMalformedStudioExample()">Load malformed example</button>
+            <button class="btn-publish-schema" onclick="validateAndPublishTimeline()">Validate &amp; publish ✓</button>
+          </div>
+
+          <div style="margin-top:16px;">
+            <div style="font-size:11px; color:var(--text-secondary); cursor:pointer;" onclick="showToast('Schema v1.2: titleId, durationSeconds, events array with ts, type, content')">
+              &gt; View schema excerpt
+            </div>
+          </div>
+
+          <div style="margin-top:16px; font-size:11px; color:var(--text-muted); line-height:1.45; border-top:1px solid var(--border-subtle); padding-top:12px;">
+            ⚠️ Malformed uploads are rejected with field-level messages. Publishing writes a new immutable version — active rooms keep the version they started with.
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ======================================================================
+       VIEW 4: SESSION WRAPPED / ANALYTICS
+       ====================================================================== -->
+  <main id="view-summary" class="view-container summary-view" style="display:none;">
+    <div class="summary-header-box">
+      <div>
+        <div class="summary-tag">✓ Session Wrapped</div>
+        <h1 class="summary-h1">Good watch, Priya.</h1>
+        <div class="summary-sub" id="summaryRoomInfo">Friday Noir Club · The Salt Road · S1 E4 "The Crossing" · 1h 42m</div>
+      </div>
+      <div style="display:flex; gap:12px;">
+        <button class="btn-dark" onclick="exportSessionReport()">📥 Export report</button>
+        <button class="btn-primary" onclick="switchView('home')">Back to home &gt;</button>
+      </div>
+    </div>
+
+    <!-- 5 Metrics Grid -->
+    <div class="metrics-5-grid">
+      <div class="metric-card">
+        <div class="metric-label">Watch time</div>
+        <div class="metric-number" id="summaryWatchTime">1h 42m</div>
+        <div class="metric-note up">▲ 18% vs your average</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Peak viewers</div>
+        <div class="metric-number" id="summaryPeakViewers">8</div>
+        <div class="metric-note">5 stayed to the end</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">AI Questions</div>
+        <div class="metric-number" id="summaryAiQuestions">23</div>
+        <div class="metric-note">91% answered from timeline</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Trivia cards</div>
+        <div class="metric-number" id="summaryTriviaCards">14</div>
+        <div class="metric-note">3 pinned by the host</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Chat messages</div>
+        <div class="metric-number" id="summaryChatMessages">186</div>
+        <div class="metric-note">Peak at 9:00 PM</div>
+      </div>
+    </div>
+
+    <!-- Middle Grid: Chart + Recommendations Retrained -->
+    <div class="summary-middle-grid">
+      <div class="chart-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <div style="font-size:14px; font-weight:700; color:#FFF;">Chat activity</div>
+          <div style="font-size:11px; color:var(--text-muted);">Messages per 10 min · 186 total</div>
+        </div>
+        <div class="chart-bars-wrap" id="summaryChartBars">
+          <!-- Injected via JS -->
+        </div>
+        <div style="display:flex; gap:16px; font-size:11px; color:var(--text-muted); margin-top:8px;">
+          <span><strong style="color:var(--primary-red);">■</strong> Peak engagement</span>
+          <span><strong style="color:rgba(229,9,20,0.5);">■</strong> Chat volume</span>
+        </div>
+      </div>
+
+      <div class="retrain-insight-card">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="insight-top-tag">Recommendations updated</div>
+            <span class="retrain-status-pill" id="retrainStatusBadge">✦ RETRAINED</span>
+          </div>
+          <div style="font-size:13px; font-weight:700; color:#FFF; margin-bottom:4px;">Because of tonight:</div>
+          <div class="insight-body">
+            Two neo-noir titles moved up your rail. Your co-watch with Maya is now weighted 1.4x.
+          </div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-subtle); padding-top:12px;">
+          <span style="font-size:11px; color:#34D399;">✓ Interaction data written - model refreshed without a redeploy.</span>
+          <button class="btn-dark" style="font-size:11px; padding:4px 10px;" onclick="retrainRecommendations()">Trigger Retrain</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Grid: Top AI Moments + Session Details -->
+    <div class="summary-bottom-grid">
+      <div class="top-moments-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <div style="font-size:14px; font-weight:700; color:#FFF;">What the room asked</div>
+          <span style="font-size:11px; color:var(--text-muted);">Top co-pilot moments</span>
+        </div>
+        <div id="summaryTopMoments">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+
+      <div class="session-specs-card">
+        <div style="font-size:14px; font-weight:700; color:#FFF; margin-bottom:14px;">Session details</div>
+        <div class="spec-grid-2col">
+          <div class="spec-item">
+            <div class="label">Host</div>
+            <div class="val">Priya Raman (you)</div>
+          </div>
+          <div class="spec-item">
+            <div class="label">Room</div>
+            <div class="val">Friday Noir Club · NX-4Q7K</div>
+          </div>
+          <div class="spec-item">
+            <div class="label">Started</div>
+            <div class="val">8:12 PM · Nov 21, 2026</div>
+          </div>
+          <div class="spec-item">
+            <div class="label">Ended</div>
+            <div class="val">9:54 PM · 1h 42m</div>
+          </div>
+          <div class="spec-item">
+            <div class="label">Variations</div>
+            <div class="val">1 subtitle swap · 1 group vote</div>
+          </div>
+          <div class="spec-item">
+            <div class="label">Sync Drift</div>
+            <div class="val" style="color:#34D399;">31 ms avg · 68 ms peak</div>
+          </div>
+        </div>
+        <div class="rbac-warning-box">
+          <span>🔒</span>
+          <span>Analytics reconcile with the event log for this session. RBAC held: only the host's playback and vote actions were accepted.</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ======================================================================
+       VIEW 5: AUTH / SIGN IN PAGE
+       ====================================================================== -->
+  <main id="view-auth" class="view-container" style="display:none; position:relative; z-index:10; background:#0B0B0E; width:100%; min-height:100vh;">
+    <div class="auth-page-container" style="display:grid; grid-template-columns:1.1fr 0.9fr; min-height:100vh;">
+      
+      <!-- CINEMATIC HERO SIDE -->
+      <div class="auth-hero-side" style="position:relative; background:#0B0B0E url('/static/images/salt-road-backdrop.jpg') center/cover no-repeat; display:flex; flex-direction:column; justify-content:space-between; padding:48px 48px 60px 48px; min-height:100vh; overflow:hidden;">
+        <!-- Dark Vignette Overlay to prevent text and image clash -->
+        <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(11,11,14,0.4) 0%, rgba(11,11,14,0.75) 50%, rgba(11,11,14,0.98) 100%), radial-gradient(circle at 60% 30%, rgba(229,9,20,0.1) 0%, transparent 70%); pointer-events:none;"></div>
+        
+        <div style="position:relative; z-index:2; display:inline-flex; align-items:center; gap:8px;">
+          <span class="netflix-logo" style="font-size:26px; font-weight:900; letter-spacing:1px; color:#E50914;">NETFLIX</span>
+          <span class="watch-spaces-pill" style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:12px; background:rgba(255,255,255,0.1); color:#FFF; border:1px solid rgba(255,255,255,0.15);">WATCH SPACES</span>
+        </div>
+
+        <div class="auth-hero-content" style="position:relative; z-index:2; max-width:520px; margin-top:auto;">
+          <div class="auth-hero-tag" style="font-size:11px; font-weight:800; letter-spacing:1.5px; color:#A1A1AA; text-transform:uppercase; margin-bottom:8px;">Social Viewing · AI Co-Pilot</div>
+          <h1 class="auth-hero-h1" style="font-family:var(--font-serif); font-size:46px; font-weight:800; color:#FFF; line-height:1.12; margin-bottom:14px; text-shadow:0 4px 20px rgba(0,0,0,0.9);">Watch together.<br>Ask anything.</h1>
+          <p class="auth-hero-sub" style="font-size:15px; color:#D1D5DB; line-height:1.5; margin-bottom:24px; text-shadow:0 2px 8px rgba(0,0,0,0.8);">
+            A synchronized room, a live chat, and a co-pilot that actually knows the story — down to the second.
+          </p>
+          <div class="auth-badges-row" style="display:flex; flex-wrap:wrap; gap:10px;">
+            <div class="auth-kpi-pill" style="border:1px solid rgba(255,255,255,0.25); background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); padding:6px 12px; border-radius:4px; font-size:10px; font-weight:800; color:#DDD; letter-spacing:0.8px;">⚡ SYNC &lt; 250 MS</div>
+            <div class="auth-kpi-pill" style="border:1px solid rgba(255,255,255,0.25); background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); padding:6px 12px; border-radius:4px; font-size:10px; font-weight:800; color:#DDD; letter-spacing:0.8px;">✦ GROUNDED AI</div>
+            <div class="auth-kpi-pill" style="border:1px solid rgba(255,255,255,0.25); background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); padding:6px 12px; border-radius:4px; font-size:10px; font-weight:800; color:#DDD; letter-spacing:0.8px;">👥 UP TO 50 PER ROOM</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AUTH FORM SIDE -->
+      <div class="auth-form-side" style="background:#0F0F12; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:48px 36px; min-height:100vh;">
+        <div class="auth-card-inner" style="width:100%; max-width:400px; background:rgba(20,20,26,0.9); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:36px; box-shadow:0 12px 40px rgba(0,0,0,0.6);">
+          
+          <div class="auth-top-tag" style="font-size:11px; font-weight:800; letter-spacing:1.2px; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Watch Spaces Authentication</div>
+
+          <!-- TAB SWITCHER: SIGN IN / CREATE ACCOUNT -->
+          <div class="auth-tabs" style="display:flex; background:rgba(255,255,255,0.06); border-radius:8px; padding:4px; margin-bottom:24px;">
+            <button type="button" class="auth-tab-btn active" id="authTabSignIn" onclick="switchAuthTab('signin')" style="flex:1; padding:10px 14px; text-align:center; font-size:13px; font-weight:700; border-radius:6px; cursor:pointer; border:none; background:rgba(255,255,255,0.18); color:#FFF; transition:all 0.2s;">
+              Sign in
+            </button>
+            <button type="button" class="auth-tab-btn" id="authTabRegister" onclick="switchAuthTab('register')" style="flex:1; padding:10px 14px; text-align:center; font-size:13px; font-weight:700; border-radius:6px; cursor:pointer; border:none; background:transparent; color:#A1A1AA; transition:all 0.2s;">
+              Create account
+            </button>
+          </div>
+
+          <!-- SIGN IN FORM CONTAINER -->
+          <div id="authSignInContainer">
+            <h2 class="auth-h2" style="font-family:var(--font-serif); font-size:30px; font-weight:700; color:#FFF; margin-bottom:6px;">Welcome back.</h2>
+            <p class="auth-sub" style="font-size:13px; color:var(--text-secondary); margin-bottom:20px;">Sign in to host a room or join one.</p>
+
+            <div id="authLoginError" class="auth-error-banner" style="display:none; background:rgba(229,9,20,0.15); border:1px solid rgba(229,9,20,0.4); color:#FF6B6B; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:16px;"></div>
+
+            <form id="authLoginForm" onsubmit="event.preventDefault(); handleAuthLogin(event); return false;">
+              <div class="form-group" style="margin-bottom:14px;">
+                <label class="form-label" for="authLoginEmail" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Email</label>
+                <input type="email" id="authLoginEmail" class="form-input" value="priya@netflix.com" placeholder="name@netflix.com" required autocomplete="email" style="width:100%; padding:12px 14px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;" />
+              </div>
+              <div class="form-group" style="margin-bottom:20px;">
+                <label class="form-label" for="authLoginPassword" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Password</label>
+                <input type="password" id="authLoginPassword" class="form-input" value="password" placeholder="Enter your password" required autocomplete="current-password" style="width:100%; padding:12px 14px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;" />
+              </div>
+              <button type="submit" id="authSignInSubmitBtn" class="btn-primary" style="width:100%; justify-content:center; padding:13px; font-size:14px; font-weight:700; border-radius:6px; cursor:pointer;">
+                Sign in &gt;
+              </button>
+              <div style="text-align:center; margin-top:14px; margin-bottom:12px; font-size:13px; color:#A1A1AA;">
+                New to Watch Spaces?
+                <button type="button" id="authSwitchToRegisterBtn" onclick="switchAuthTab('register')" style="background:none; border:none; color:#FFF; font-weight:700; text-decoration:underline; cursor:pointer; font-size:13px; padding:0; margin-left:4px;">
+                  Create an account
+                </button>
+              </div>
+            </form>
+
+            <!-- Quick Demo Accounts -->
+            <div class="auth-quick-demo-box" style="margin-top:22px; padding-top:18px; border-top:1px solid rgba(255,255,255,0.08);">
+              <div class="auth-quick-demo-title" style="font-size:11px; font-weight:800; letter-spacing:0.8px; color:#A1A1AA; margin-bottom:12px; text-transform:uppercase;">⚡ Quick Demo Profiles</div>
+              <div class="auth-quick-demo-pills" style="display:flex; flex-direction:column; gap:8px; width:100%;">
+                <button type="button" class="auth-demo-pill" onclick="fillDemoLogin('priya@netflix.com', 'password')" style="display:flex; align-items:center; gap:12px; width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:10px 14px; color:#FFF; font-size:13px; font-weight:600; cursor:pointer; text-align:left; transition:all 0.2s;">
+                  <span class="auth-pill-avatar" style="width:26px; height:26px; border-radius:4px; background:#E50914; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#FFF; flex-shrink:0;">PR</span>
+                  <div style="display:flex; flex-direction:column;">
+                    <span style="color:#FFF; font-size:13px; font-weight:600;">Priya (Host)</span>
+                    <span style="color:#71717A; font-size:11px;">priya@netflix.com</span>
+                  </div>
+                </button>
+                <button type="button" class="auth-demo-pill" onclick="fillDemoLogin('maya@example.com', 'password')" style="display:flex; align-items:center; gap:12px; width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:10px 14px; color:#FFF; font-size:13px; font-weight:600; cursor:pointer; text-align:left; transition:all 0.2s;">
+                  <span class="auth-pill-avatar" style="width:26px; height:26px; border-radius:4px; background:#EAB308; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#FFF; flex-shrink:0;">MA</span>
+                  <div style="display:flex; flex-direction:column;">
+                    <span style="color:#FFF; font-size:13px; font-weight:600;">Maya</span>
+                    <span style="color:#71717A; font-size:11px;">maya@example.com</span>
+                  </div>
+                </button>
+                <button type="button" class="auth-demo-pill" onclick="fillDemoLogin('admin@netflix.com', 'password')" style="display:flex; align-items:center; gap:12px; width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:10px 14px; color:#FFF; font-size:13px; font-weight:600; cursor:pointer; text-align:left; transition:all 0.2s;">
+                  <span class="auth-pill-avatar" style="width:26px; height:26px; border-radius:4px; background:#8B5CF6; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#FFF; flex-shrink:0;">AD</span>
+                  <div style="display:flex; flex-direction:column;">
+                    <span style="color:#FFF; font-size:13px; font-weight:600;">Studio Admin</span>
+                    <span style="color:#71717A; font-size:11px;">admin@netflix.com</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- CREATE ACCOUNT (REGISTER) FORM CONTAINER -->
+          <div id="authRegisterContainer" style="display:none;">
+            <h2 class="auth-h2" style="font-family:var(--font-serif); font-size:30px; font-weight:700; color:#FFF; margin-bottom:6px;">Create account.</h2>
+            <p class="auth-sub" style="font-size:13px; color:var(--text-secondary); margin-bottom:20px;">Join synchronized watch spaces, live chat, and AI co-pilots.</p>
+
+            <div id="authRegisterError" class="auth-error-banner" style="display:none; background:rgba(229,9,20,0.15); border:1px solid rgba(229,9,20,0.4); color:#FF6B6B; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:16px;"></div>
+
+            <form id="authRegisterForm" onsubmit="event.preventDefault(); handleAuthRegister(event); return false;">
+              <div class="form-group" style="margin-bottom:14px;">
+                <label class="form-label" for="authRegisterName" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Full Name</label>
+                <input type="text" id="authRegisterName" class="form-input" placeholder="e.g. Alex Chen" required autocomplete="name" style="width:100%; padding:12px 14px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;" />
+              </div>
+              <div class="form-group" style="margin-bottom:14px;">
+                <label class="form-label" for="authRegisterEmail" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Email Address</label>
+                <input type="email" id="authRegisterEmail" class="form-input" placeholder="alex@netflix.com" required autocomplete="email" style="width:100%; padding:12px 14px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;" />
+              </div>
+              <div class="form-group" style="margin-bottom:14px;">
+                <label class="form-label" for="authRegisterPassword" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Password</label>
+                <input type="password" id="authRegisterPassword" class="form-input" placeholder="Minimum 4 characters" required autocomplete="new-password" minlength="4" style="width:100%; padding:12px 14px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;" />
+              </div>
+              <div class="form-group" style="margin-bottom:20px;">
+                <label class="form-label" for="authRegisterRole" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Role</label>
+                <select id="authRegisterRole" class="form-input" style="width:100%; padding:12px 14px; background:#111; border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;">
+                  <option value="viewer" selected>Viewer (Join &amp; participate in rooms)</option>
+                  <option value="host">Host (Host rooms &amp; control playback)</option>
+                </select>
+              </div>
+              <button type="submit" id="authRegisterSubmitBtn" class="btn-primary" onclick="handleAuthRegister(event)" style="width:100%; justify-content:center; padding:13px; font-size:14px; font-weight:700; border-radius:6px; cursor:pointer;">
+                Create account &gt;
+              </button>
+              <div style="text-align:center; margin-top:14px; margin-bottom:12px; font-size:13px; color:#A1A1AA;">
+                Already have an account?
+                <button type="button" id="authSwitchToSignInBtn" onclick="switchAuthTab('signin')" style="background:none; border:none; color:#FFF; font-weight:700; text-decoration:underline; cursor:pointer; font-size:13px; padding:0; margin-left:4px;">
+                  Sign in
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <button type="button" class="btn-demo-viewer" onclick="switchUserPersona('u_maya', 'Maya', 'viewer', 'MA', '#EAB308'); switchView('home');" style="width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#FFF; font-weight:600; font-size:13px; padding:12px; border-radius:6px; margin-top:14px; cursor:pointer; transition:all 0.2s;">
+            Continue as demo viewer
+          </button>
+
+          <p class="auth-disclaimer" style="font-size:12px; color:#71717A; line-height:1.45; margin-top:20px; text-align:center;">
+            Secure token-based authentication.
+            <a href="#" onclick="switchView('home')" style="color:#FFF; text-decoration:underline; font-weight:600;">Preview the dashboard</a> without signing in.
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ======================================================================
+       MODAL: CREATE WATCH SPACE (2 STEPS)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="createSpaceModal" style="display:none;">
+    <div class="modal-dialog">
+      <!-- Step 1: Set the room -->
+      <div id="createSpaceStep1">
+        <div class="modal-header">
+          <div>
+            <div class="modal-step-tag">New watch space · Step 1 of 2</div>
+            <h2 class="modal-h2">Set the room.</h2>
+            <div class="modal-sub">Pick a title, choose who can join, and decide how chatty the co-pilot should be.</div>
+          </div>
+          <button class="modal-close-btn" onclick="closeCreateModal()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Title <span style="font-weight:normal; text-transform:none; color:var(--text-muted);">(only titles with a published timeline can run the AI co-pilot)</span></label>
+            <div class="title-picker-row" id="createTitlePickerRow">
+              <div class="title-picker-card selected" data-title-id="t_stranger_things" title="Stranger Things">
+                <img src="/static/images/poster-stranger-things.svg" alt="Stranger Things" />
+              </div>
+              <div class="title-picker-card" data-title-id="t_jailer" title="Jailer">
+                <img src="/static/images/poster-jailer.svg" alt="Jailer" />
+              </div>
+              <div class="title-picker-card" data-title-id="t_squid_game" title="Squid Game">
+                <img src="/static/images/poster-squid-game.svg" alt="Squid Game" />
+              </div>
+              <div class="title-picker-card" data-title-id="t_wednesday" title="Wednesday">
+                <img src="/static/images/poster-wednesday.svg" alt="Wednesday" />
+              </div>
+              <div class="title-picker-card" data-title-id="t_money_heist" title="Money Heist">
+                <img src="/static/images/poster-money-heist.svg" alt="Money Heist" />
+              </div>
+              <div class="title-picker-card" data-title-id="t_queens_gambit" title="The Queen's Gambit">
+                <img src="/static/images/poster-queens-gambit.svg" alt="The Queen's Gambit" />
+              </div>
+              <div class="title-picker-card" data-title-id="t_dark" title="Dark">
+                <img src="/static/images/poster-dark.svg" alt="Dark" />
+              </div>
+              <div class="title-picker-card" data-title-id="t_1001" title="The Salt Road">
+                <img src="/static/images/poster-salt-road.jpg" alt="The Salt Road" />
+              </div>
+              <div class="title-picker-card" data-title-id="t_1002" title="Vela">
+                <img src="/static/images/poster-vela.jpg" alt="Vela" />
+              </div>
+              <div class="title-picker-card" data-title-id="t_1003" title="Midnight Cartography">
+                <img src="/static/images/poster-midnight.jpg" alt="Midnight Cartography" />
+              </div>
+              <div class="title-picker-card" data-title-id="t_1004" title="Paper Tigers">
+                <img src="/static/images/poster-paper-tigers.jpg" alt="Paper Tigers" />
+              </div>
+              <div class="title-picker-card" data-title-id="t_1005" title="Northwind">
+                <img src="/static/images/poster-northwind.jpg" alt="Northwind" />
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 140px; gap:16px;">
+            <div class="form-group">
+              <label class="form-label">Room name</label>
+              <input type="text" class="form-input" id="createRoomName" value="Stranger Things Hawkins Space" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Max participants</label>
+              <div class="stepper-row">
+                <button class="stepper-btn" id="stepMinus">-</button>
+                <span class="stepper-val" id="createMaxParticipants">15</span>
+                <button class="stepper-btn" id="stepPlus">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Privacy</label>
+            <div class="toggle-group">
+              <button class="toggle-opt-btn privacy-btn active" data-val="invite_only">🔒 Invite only</button>
+              <button class="toggle-opt-btn privacy-btn" data-val="public">🌐 Public link</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">AI Co-Pilot Verbosity</label>
+            <div class="toggle-group">
+              <button class="toggle-opt-btn verbosity-btn" data-val="minimal">Minimal</button>
+              <button class="toggle-opt-btn verbosity-btn active" data-val="normal">Normal</button>
+              <button class="toggle-opt-btn verbosity-btn" data-val="chatty">Chatty</button>
+            </div>
+          </div>
+
+          <div class="switch-row">
+            <div class="switch-label-wrap">
+              <div class="title">Group voting</div>
+              <div class="desc">Let participants vote on pre-approved subtitle and scene variations during playback.</div>
+            </div>
+            <input type="checkbox" class="switch-checkbox" id="createVotingToggle" checked />
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-dark" onclick="closeCreateModal()">Cancel</button>
+          <button class="btn-primary" onclick="submitCreateSpace()">Create watch space &gt;</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Invite your people -->
+      <div id="createSpaceStep2" style="display:none;">
+        <div class="modal-header">
+          <div>
+            <div class="modal-step-tag">✓ Watch space created</div>
+            <h2 class="modal-h2">Invite your people.</h2>
+            <div class="modal-sub" id="createdRoomNameHeading">Friday Noir Club is ready. Share the code — everyone stays in sync once they join.</div>
+          </div>
+          <button class="modal-close-btn" onclick="closeCreateModal()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="invite-code-box">
+            <div class="invite-code-label">Invite code</div>
+            <div class="invite-code-huge" id="createdInviteCode">NX-4Q7K</div>
+            <div class="invite-code-sub">Active while the room is open</div>
+          </div>
+
+          <div class="copy-link-bar">
+            <input type="text" class="link-input" id="createdJoinLink" value="http://localhost:8000/join/NX-4Q7K" readonly />
+            <button class="btn-copy-link" onclick="copyJoinLink()">📋 Copy</button>
+          </div>
+
+          <div class="rbac-warning-box" style="background:rgba(139,92,246,0.1); border-color:rgba(139,92,246,0.3); color:#DDD;">
+            <span>✦</span>
+            <span>AI co-pilot is set to normal verbosity. Group voting is on. You can change both from inside the room.</span>
+          </div>
+
+          <div class="rbac-warning-box" style="background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3); color:#DDD;">
+            <span>👥</span>
+            <span>Room capacity: 15 participants. Only people with the code can join.</span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-dark" onclick="document.getElementById('createSpaceStep2').style.display='none'; document.getElementById('createSpaceStep1').style.display='block';">Back</button>
+          <button class="btn-primary" onclick="enterCreatedWatchRoom()">Enter watch room &gt;</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: JOIN A ROOM
+       ====================================================================== -->
+  <div class="modal-backdrop" id="joinRoomModal" style="display:none;">
+    <div class="modal-dialog" style="max-width: 440px;">
+      <div class="modal-header">
+        <div>
+          <div class="modal-step-tag">Join a room</div>
+          <h2 class="modal-h2">Got a code?</h2>
+          <div class="modal-sub">Enter the invite code your host shared. We'll sync your player to the room clock before playback starts.</div>
+        </div>
+        <button class="modal-close-btn" onclick="closeJoinModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Invite Code</label>
+          <input type="text" class="form-input" id="joinInviteCodeInput" value="NX-4Q7K" placeholder="NX-XXXX" style="font-family:monospace; font-size:16px; letter-spacing:2px; text-transform:uppercase;" />
+          <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Demo code: NX-4Q7K</div>
+        </div>
+
+        <div class="rbac-warning-box" style="background:rgba(59,130,246,0.1); border-color:rgba(59,130,246,0.3); color:#93C5FD;">
+          <span>⏱</span>
+          <span>Joining mid-playback? The player micro-seeks to the host's position — no jarring restart.</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-dark" onclick="closeJoinModal()">Cancel</button>
+        <button class="btn-primary" onclick="submitJoinRoom()">Join room &gt;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: IMPORT TITLE FROM NETFLIX DIRECTLY
+       ====================================================================== -->
+  <div class="modal-backdrop" id="netflixImportModal" style="display:none;">
+    <div class="modal-dialog" style="max-width: 650px;">
+      <div class="modal-header">
+        <div>
+          <div class="modal-step-tag" style="color:var(--primary-red);">Netflix Platform · Direct Ingestion</div>
+          <h2 class="modal-h2">Get Movie Directly from Netflix</h2>
+          <div class="modal-sub">
+            Search any Netflix title or paste a Netflix URL (e.g. <code>https://www.netflix.com/title/80057281</code>). Title metadata and AI Co-Pilot timeline events will be generated automatically.
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="closeNetflixImportModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Search Netflix or Paste URL / Title ID</label>
+          <div style="display:flex; gap:10px;">
+            <input type="text" class="form-input" id="netflixSearchInput" placeholder="e.g. Stranger Things, Squid Game, or https://www.netflix.com/title/80057281" style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault(); searchNetflixDirect();}" />
+            <button class="btn-primary" onclick="searchNetflixDirect()">
+              <span>⚡</span> Fetch from Netflix
+            </button>
+          </div>
+        </div>
+
+        <div style="margin-top:-6px;">
+          <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px;">Quick Netflix catalog suggestions:</div>
+          <div class="chips-cloud" id="netflixQuickSuggestions">
+            <button class="moment-chip" onclick="quickFetchNetflix('Stranger Things')">Stranger Things</button>
+            <button class="moment-chip" onclick="quickFetchNetflix('Squid Game')">Squid Game</button>
+            <button class="moment-chip" onclick="quickFetchNetflix('Wednesday')">Wednesday</button>
+            <button class="moment-chip" onclick="quickFetchNetflix('Dark')">Dark</button>
+            <button class="moment-chip" onclick="quickFetchNetflix('Money Heist')">Money Heist</button>
+            <button class="moment-chip" onclick="quickFetchNetflix('Black Mirror')">Black Mirror</button>
+          </div>
+        </div>
+
+        <!-- Live Netflix Title Preview Box -->
+        <div id="netflixPreviewCard" style="display:none; background:rgba(255,255,255,0.04); border:1px solid var(--border-medium); border-radius:var(--radius-md); padding:16px;">
+          <div style="display:flex; gap:16px;">
+            <img id="netflixPreviewPoster" src="" alt="Poster" style="width:90px; height:130px; object-fit:cover; border-radius:4px; border:1px solid var(--border-subtle);" />
+            <div style="flex:1; display:flex; flex-direction:column; justify-content:space-between;">
+              <div>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
+                  <span class="n-red-letter" style="font-size:16px; font-weight:900;">N</span>
+                  <span id="netflixPreviewName" style="font-size:18px; font-weight:700; color:#FFF;"></span>
+                  <span class="meta-badge" id="netflixPreviewRating">TV-MA</span>
+                  <span class="meta-match" id="netflixPreviewMatch">98% match</span>
+                </div>
+                <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px;" id="netflixPreviewMeta"></div>
+                <div style="font-size:12px; color:#CCC; line-height:1.45;" id="netflixPreviewSynopsis"></div>
+              </div>
+              <div style="display:flex; gap:8px; margin-top:8px;">
+                <span class="badge-status-published" style="font-size:10px;">● DIRECT NETFLIX INGESTION</span>
+                <span class="badge-schema-v" style="font-size:10px;" id="netflixPreviewEventsCount">24 CO-PILOT EVENTS</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rbac-warning-box" style="background:rgba(229,9,20,0.1); border-color:rgba(229,9,20,0.3); color:#FFC0C3;">
+          <span>✦</span>
+          <span>Importing adds this title to the SQL database, creates Schema v1.2 timeline events, and hydrates the AI Co-Pilot with scene markers, trivia, and variation points.</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-dark" onclick="closeNetflixImportModal()">Cancel</button>
+        <button class="btn-primary" id="btnConfirmNetflixImport" style="display:none;" onclick="confirmNetflixImport()">
+          Import into Catalog &amp; Build Co-Pilot Timeline ✓
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: ACCOUNT & PROFILE SETTINGS
+       ====================================================================== -->
+  <div class="modal-backdrop" id="accountSettingsModal" style="display:none;">
+    <div class="modal-dialog" style="max-width: 500px;">
+      <div class="modal-header">
+        <div>
+          <div class="modal-step-tag" style="color:var(--primary-red);">Netflix Account & Preferences</div>
+          <h2 class="modal-h2">Profile & Settings</h2>
+          <div class="modal-sub">View and manage your Watch Spaces profile, subtitle preferences, and plan.</div>
+        </div>
+        <button class="modal-close-btn" onclick="closeAccountSettingsModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div style="display:flex; align-items:center; gap:14px; padding:14px; background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:8px; margin-bottom:16px;">
+          <div class="dropdown-avatar-badge" id="settingsModalAvatar" style="width:48px; height:48px; font-size:18px;">PR</div>
+          <div style="flex:1;">
+            <div style="font-size:15px; font-weight:700; color:#fff;" id="settingsModalName">Priya Raman</div>
+            <div style="font-size:12px; color:var(--text-muted);" id="settingsModalEmail">priya@netflix.com</div>
+            <div style="display:inline-block; margin-top:4px; font-size:10px; font-weight:700; padding:2px 8px; border-radius:4px; background:rgba(229,9,20,0.15); color:var(--primary-red); border:1px solid rgba(229,9,20,0.3);" id="settingsModalRole">HOST · ENGINEERING LEAD</div>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div class="form-group">
+            <label class="form-label">Display Name</label>
+            <input type="text" id="settingsDisplayNameInput" class="form-input" value="Priya Raman" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Account Email</label>
+            <input type="email" id="settingsEmailInput" class="form-input" value="priya@netflix.com" disabled style="opacity:0.65; cursor:not-allowed;" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Default Audio & Subtitles</label>
+            <select class="form-input" id="settingsLocaleSelect">
+              <option value="en-US" selected>English (en-US)</option>
+              <option value="es-ES">Spanish (es-ES)</option>
+              <option value="fr-FR">French (fr-FR)</option>
+              <option value="de-DE">German (de-DE)</option>
+              <option value="ja-JP">Japanese (ja-JP)</option>
+              <option value="hi-IN">Hindi (hi-IN)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Subscription Plan</label>
+            <div style="background:var(--bg-elevated); border:1px solid var(--border-subtle); padding:10px 14px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-weight:600; font-size:13px; color:#fff;">Netflix Ultra HD Watch Spaces</div>
+                <div style="font-size:11px; color:var(--text-muted);">4K HDR · Dolby Atmos · Grounded AI Co-Pilot · Up to 50 Members</div>
+              </div>
+              <span style="font-size:10px; background:#10B981; color:#000; font-weight:800; padding:2px 6px; border-radius:4px;">ACTIVE</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-dark" onclick="closeAccountSettingsModal()">Close</button>
+        <button class="btn-primary" onclick="saveAccountSettings()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="/static/js/app.js?v=20261124_voice01"></script>
+</body>
+</html>

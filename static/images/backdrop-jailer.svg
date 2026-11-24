@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="100%" height="100%">
+  <defs>
+    <linearGradient id="jl-bd-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0704"/>
+      <stop offset="45%" stop-color="#1f1006"/>
+      <stop offset="100%" stop-color="#3d1b03"/>
+    </linearGradient>
+    <radialGradient id="jl-bd-core" cx="70%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#E5A00D" stop-opacity="0.45"/>
+      <stop offset="60%" stop-color="#B8390E" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#jl-bd-bg)"/>
+  <circle cx="880" cy="280" r="400" fill="url(#jl-bd-core)"/>
+  <path d="M0,590 Q450,560 900,580 T1280,570 L1280,720 L0,720 Z" fill="#060402"/>
+</svg>

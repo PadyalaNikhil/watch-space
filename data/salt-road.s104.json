@@ -1,0 +1,308 @@
+{
+  "titleId": "t_1001",
+  "titleName": "The Salt Road",
+  "version": "v1.2",
+  "durationSeconds": 2730,
+  "events": [
+    {
+      "ts": 160,
+      "type": "glossary",
+      "content": "\"The Salt Road\" \u2014 a smuggling route across the salar",
+      "id": "evt_2276"
+    },
+    {
+      "ts": 310,
+      "type": "glossary",
+      "content": "\"Waypoints\" \u2014 GPS dead-reckoning stakes placed during drought season",
+      "id": "evt_2288"
+    },
+    {
+      "ts": 520,
+      "type": "glossary",
+      "content": "\"White Out\" \u2014 blinding optical reflection on salt during sunrise",
+      "id": "evt_2320"
+    },
+    {
+      "ts": 920,
+      "type": "glossary",
+      "content": "\"Salar\" \u2014 a salt flat formed by evaporated lakes",
+      "id": "evt_2491"
+    },
+    {
+      "ts": 1180,
+      "type": "glossary",
+      "content": "\"Lithium Vein\" \u2014 mineral deposits causing compass anomalies",
+      "id": "evt_2550"
+    },
+    {
+      "ts": 1420,
+      "type": "glossary",
+      "content": "\"Dead Frequency\" \u2014 radio blackout zone along the tectonic ridge",
+      "id": "evt_2610"
+    },
+    {
+      "ts": 1690,
+      "type": "glossary",
+      "content": "\"Courier Seal\" \u2014 tamper-evident biometric clasp on the cargo",
+      "id": "evt_2700"
+    },
+    {
+      "ts": 1950,
+      "type": "glossary",
+      "content": "\"Mirage Line\" \u2014 heat distortion masking vehicle silhouettes",
+      "id": "evt_2810"
+    },
+    {
+      "ts": 2180,
+      "type": "glossary",
+      "content": "\"Thermal Sink\" \u2014 nighttime sub-zero ground drop in the basin",
+      "id": "evt_2900"
+    },
+    {
+      "ts": 2340,
+      "type": "glossary",
+      "content": "\"Ghost Crossing\" \u2014 unofficial border line surveyed in 1912",
+      "id": "evt_2950"
+    },
+    {
+      "ts": 2510,
+      "type": "glossary",
+      "content": "\"Telemetry Ping\" \u2014 encrypted beacon pulse sent every 10 minutes",
+      "id": "evt_3010"
+    },
+    {
+      "ts": 2600,
+      "type": "glossary",
+      "content": "\"Brine Trench\" \u2014 submerged drainage furrow hidden under salt crust",
+      "id": "evt_3050"
+    },
+    {
+      "ts": 2650,
+      "type": "glossary",
+      "content": "\"Sub-Surface Density\" \u2014 soil hardness measured by acoustic ground probes",
+      "id": "evt_3070"
+    },
+    {
+      "ts": 2680,
+      "type": "glossary",
+      "content": "\"Extraction Point Alpha\" \u2014 abandoned railway water tank depot",
+      "id": "evt_3080"
+    },
+    {
+      "ts": 2715,
+      "type": "glossary",
+      "content": "\"Border Beacon\" \u2014 radio azimuth beacon marking federal territory",
+      "id": "evt_3095"
+    },
+    {
+      "ts": 252,
+      "type": "character",
+      "character_name": "Detective Rios",
+      "content": "Detective Rios appears on the platform",
+      "id": "evt_2291"
+    },
+    {
+      "ts": 554,
+      "type": "character",
+      "character_name": "Ilse",
+      "content": "Ilse's red thread reappears in the mirror shot",
+      "id": "evt_2344"
+    },
+    {
+      "ts": 718,
+      "type": "character",
+      "character_name": "Ilse",
+      "content": "Tracking signal drops as Ilse leaves the marked route",
+      "id": "evt_2482"
+    },
+    {
+      "ts": 1050,
+      "type": "character",
+      "character_name": "Detective Rios",
+      "content": "Rios cross-checks satellite thermal trails with border patrol",
+      "id": "evt_2580"
+    },
+    {
+      "ts": 1280,
+      "type": "character",
+      "character_name": "The Broker",
+      "content": "The Broker answers from a satellite uplink in Santiago",
+      "id": "evt_2650"
+    },
+    {
+      "ts": 1540,
+      "type": "character",
+      "character_name": "Ilse",
+      "content": "Ilse cuts off the auxiliary fuel pump to conserve battery",
+      "id": "evt_2750"
+    },
+    {
+      "ts": 1820,
+      "type": "character",
+      "character_name": "Detective Rios",
+      "content": "Rios reaches the edge of the paved highway looking into the flats",
+      "id": "evt_2850"
+    },
+    {
+      "ts": 2100,
+      "type": "character",
+      "character_name": "Ilse",
+      "content": "Ilse unholsters the flare pistol as headlights appear behind",
+      "id": "evt_2930"
+    },
+    {
+      "ts": 2420,
+      "type": "character",
+      "character_name": "Unknown Driver",
+      "content": "Unidentified chase vehicle matches Rios's department issue",
+      "id": "evt_2990"
+    },
+    {
+      "ts": 75,
+      "type": "trivia",
+      "content": "Opening shot establishes the unmarked desert corridor in Bolivia.",
+      "id": "evt_2210"
+    },
+    {
+      "ts": 365,
+      "type": "trivia",
+      "content": "The red thread bracelet was improvised by the actor during rehearsal.",
+      "id": "evt_3114"
+    },
+    {
+      "ts": 610,
+      "type": "trivia",
+      "content": "The director used anamorphic lenses to emphasize isolation on the salt flat.",
+      "id": "evt_3115"
+    },
+    {
+      "ts": 812,
+      "type": "trivia",
+      "content": "The crossing sequence was filmed on the Salar de Uyuni over four nights \u2014 one car, no CGI.",
+      "id": "evt_3118"
+    },
+    {
+      "ts": 980,
+      "type": "trivia",
+      "content": "Ambient sound was captured using binaural hydrophones placed directly in brine pools.",
+      "id": "evt_3122"
+    },
+    {
+      "ts": 1120,
+      "type": "trivia",
+      "content": "The actor drove the stunt sedan herself during all high-speed drift sequences.",
+      "id": "evt_3125"
+    },
+    {
+      "ts": 1350,
+      "type": "trivia",
+      "content": "Lighting was provided exclusively by helium balloon lights suspended from cranes.",
+      "id": "evt_3130"
+    },
+    {
+      "ts": 1580,
+      "type": "trivia",
+      "content": "The temperature dropped to -14\u00b0C during this night shoot.",
+      "id": "evt_3135"
+    },
+    {
+      "ts": 1750,
+      "type": "trivia",
+      "content": "The cargo canister prop contains working mechanical counterweights.",
+      "id": "evt_3140"
+    },
+    {
+      "ts": 1900,
+      "type": "trivia",
+      "content": "The car sedan is the same vehicle used in the opening shot.",
+      "id": "evt_3802"
+    },
+    {
+      "ts": 2040,
+      "type": "trivia",
+      "content": "The camera crew wore specialized non-reflective white suits to avoid reflections on salt.",
+      "id": "evt_3810"
+    },
+    {
+      "ts": 2240,
+      "type": "trivia",
+      "content": "Composer utilized traditional Andean charango strings processed through modular synthesizers.",
+      "id": "evt_3820"
+    },
+    {
+      "ts": 2390,
+      "type": "trivia",
+      "content": "Over 200kg of edible salt had to be washed from the car undercarriage daily.",
+      "id": "evt_3830"
+    },
+    {
+      "ts": 2570,
+      "type": "trivia",
+      "content": "The sequence was shot chronologically to track real vehicle tire wear.",
+      "id": "evt_3840"
+    },
+    {
+      "ts": 2700,
+      "type": "trivia",
+      "content": "Final aerial frame was filmed at dawn from a stealth electric drone.",
+      "id": "evt_3850"
+    },
+    {
+      "ts": 1324,
+      "type": "variation_point",
+      "variationId": "v_01",
+      "content": "Subtitle variation v_01 \u00b7 2 pre-approved options",
+      "id": "evt_3510",
+      "options": [
+        {
+          "id": "a",
+          "label": "\"We're not lost. We're just early.\"",
+          "assetRef": "sub_v01_a"
+        },
+        {
+          "id": "b",
+          "label": "\"We're not lost. We're ahead of schedule.\"",
+          "assetRef": "sub_v01_b"
+        }
+      ]
+    },
+    {
+      "ts": 1840,
+      "type": "variation_point",
+      "variationId": "v_02",
+      "content": "Narrative cut variation v_02 \u00b7 Radio broadcast focus",
+      "id": "evt_3520",
+      "options": [
+        {
+          "id": "a",
+          "label": "Listen to weather frequency warning",
+          "assetRef": "audio_alt_weather"
+        },
+        {
+          "id": "b",
+          "label": "Listen to police emergency dispatch",
+          "assetRef": "audio_alt_police"
+        }
+      ]
+    },
+    {
+      "ts": 2450,
+      "type": "variation_point",
+      "variationId": "v_03",
+      "content": "Lighting & color grading variant v_03 \u00b7 Horizon tint",
+      "id": "evt_3530",
+      "options": [
+        {
+          "id": "a",
+          "label": "Cool indigo twilight grade",
+          "assetRef": "lut_indigo"
+        },
+        {
+          "id": "b",
+          "label": "Deep amber dawn grade",
+          "assetRef": "lut_amber"
+        }
+      ]
+    }
+  ]
+}

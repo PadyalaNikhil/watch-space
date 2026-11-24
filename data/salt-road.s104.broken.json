@@ -1,0 +1,97 @@
+{
+  "titleId": "t_1001",
+  "version": "v1.2",
+  "durationSeconds": 2730,
+  "events": [
+    {
+      "ts": 160,
+      "type": "glossary",
+      "content": "\"The Salt Road\" \u2014 a smuggling route across the salar",
+      "id": "evt_2276"
+    },
+    {
+      "ts": 310,
+      "type": "glossary",
+      "content": "\"Waypoints\" \u2014 GPS dead-reckoning stakes placed during drought season",
+      "id": "evt_2288"
+    },
+    {
+      "ts": 520,
+      "type": "glossary",
+      "content": "\"White Out\" \u2014 blinding optical reflection on salt during sunrise",
+      "id": "evt_2320"
+    },
+    {
+      "ts": 920,
+      "type": "glossary",
+      "content": "\"Salar\" \u2014 a salt flat formed by evaporated lakes",
+      "id": "evt_2491"
+    },
+    {
+      "ts": 1180,
+      "type": "glossary",
+      "content": "\"Lithium Vein\" \u2014 mineral deposits causing compass anomalies",
+      "id": "evt_2550"
+    },
+    {
+      "ts": 1420,
+      "type": "glossary",
+      "content": "\"Dead Frequency\" \u2014 radio blackout zone along the tectonic ridge",
+      "id": "evt_2610"
+    },
+    {
+      "ts": 1690,
+      "type": "glossary",
+      "content": "\"Courier Seal\" \u2014 tamper-evident biometric clasp on the cargo",
+      "id": "evt_2700"
+    },
+    {
+      "ts": 1950,
+      "type": "invalid_action_type",
+      "content": "\"Mirage Line\" \u2014 heat distortion masking vehicle silhouettes",
+      "id": "evt_2810"
+    },
+    {
+      "ts": 2180,
+      "type": "glossary",
+      "content": "\"Thermal Sink\" \u2014 nighttime sub-zero ground drop in the basin",
+      "id": "evt_2900"
+    },
+    {
+      "ts": 2340,
+      "type": "glossary",
+      "content": "\"Ghost Crossing\" \u2014 unofficial border line surveyed in 1912",
+      "id": "evt_2950"
+    },
+    {
+      "ts": 2510,
+      "type": "glossary",
+      "content": "\"Telemetry Ping\" \u2014 encrypted beacon pulse sent every 10 minutes",
+      "id": "evt_3010"
+    },
+    {
+      "ts": 2600,
+      "type": "glossary",
+      "content": "\"Brine Trench\" \u2014 submerged drainage furrow hidden under salt crust",
+      "id": "evt_3050"
+    },
+    {
+      "type": "glossary",
+      "content": "\"Sub-Surface Density\" \u2014 soil hardness measured by acoustic ground probes",
+      "id": "evt_3070"
+    },
+    {
+      "ts": 2680,
+      "type": "glossary",
+      "content": "\"Extraction Point Alpha\" \u2014 abandoned railway water tank depot",
+      "id": "evt_3080"
+    },
+    {
+      "ts": 1900,
+      "type": "variationPoint",
+      "variationId": "v_02",
+      "content": "variationPoint without options",
+      "options": []
+    }
+  ]
+}

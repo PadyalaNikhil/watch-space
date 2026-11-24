@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" width="100%" height="100%">
+  <defs>
+    <linearGradient id="qg-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a1210"/>
+      <stop offset="50%" stop-color="#142621"/>
+      <stop offset="100%" stop-color="#213d35"/>
+    </linearGradient>
+    <radialGradient id="qg-glow" cx="50%" cy="45%" r="50%">
+      <stop offset="0%" stop-color="#E5A00D" stop-opacity="0.4"/>
+      <stop offset="70%" stop-color="#E5A00D" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="600" fill="url(#qg-bg)"/>
+  <circle cx="200" cy="270" r="160" fill="url(#qg-glow)"/>
+
+  <!-- Netflix Red N Badge -->
+  <g transform="translate(24, 28)">
+    <path d="M0,0 L7,0 L18,32 L18,0 L24,0 L24,36 L17,36 L6,4 L6,36 L0,36 Z" fill="#E50914"/>
+    <text x="32" y="22" fill="#FFFFFF" font-family="'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="800" letter-spacing="3">SERIES</text>
+  </g>
+  <rect x="310" y="28" width="66" height="20" rx="3" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+  <text x="343" y="42" fill="#FFF" font-family="sans-serif" font-size="9" font-weight="700" text-anchor="middle">4K HDR</text>
+
+  <!-- Chess Queen Silhouette -->
+  <g transform="translate(200, 240)" fill="#E5A00D" opacity="0.9">
+    <circle cx="0" cy="-45" r="7"/>
+    <circle cx="-28" cy="-35" r="5"/>
+    <circle cx="28" cy="-35" r="5"/>
+    <path d="M-30,-28 L-15,10 L15,10 L30,-28 L15,-15 L0,-38 L-15,-15 Z"/>
+    <rect x="-24" y="14" width="48" height="8" rx="2"/>
+    <rect x="-32" y="26" width="64" height="12" rx="3"/>
+  </g>
+
+  <!-- Title: THE QUEEN'S GAMBIT -->
+  <g transform="translate(200, 365)" text-anchor="middle">
+    <text y="0" fill="#FFFFFF" font-family="'Georgia', serif" font-size="28" font-weight="700" letter-spacing="3">THE QUEEN'S GAMBIT</text>
+    <text y="24" fill="#E5A00D" font-family="'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="4">LIMITED SERIES</text>
+  </g>
+
+  <!-- Bottom info -->
+  <g transform="translate(200, 545)" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif">
+    <text y="0" fill="#46D369" font-size="13" font-weight="700">95% Match  ·  2020  ·  TV-MA</text>
+    <text y="22" fill="#A3A3B2" font-size="11" font-weight="500">Drama · Cerebral · Period Piece</text>
+  </g>
+</svg>

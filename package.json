@@ -1,0 +1,23 @@
+{
+  "name": "netflix",
+  "version": "1.0.0",
+  "description": "[![Python 3.13](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/) [![Django 6.1](https://img.shields.io/badge/Django-6.1-green.svg)](https://www.djangoproject.com/) [![Database SQL](https://img.shields.io/badge/Database-SQL%20(Relational)-orange.svg)](https://sqlite.org/) [![Tests](https://img.shields.io/badge/Tests-16%20Passing-brightgreen.svg)]() [![Sync Drift](https://img.shields.io/badge/Sync%20Drift-%3C250ms%20(31ms%20avg)-success.svg)]() [![AI Latency](https://img.shields.io/badge/AI%20Latency-1.4s%20(P95)-blueviolet.svg)]()",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^26.6.6"
+  }
+}
