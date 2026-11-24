@@ -54,6 +54,12 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+try:
+    import whitenoise
+    MIDDLEWARE.insert(2, 'whitenoise.middleware.WhiteNoiseMiddleware')
+except ImportError:
+    pass
+
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
@@ -77,10 +83,22 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
+DB_PATH = BASE_DIR / 'db.sqlite3'
+if os.environ.get('VERCEL'):
+    tmp_db = Path('/tmp/db.sqlite3')
+    if not tmp_db.exists() and DB_PATH.exists():
+        import shutil
+        try:
+            shutil.copyfile(DB_PATH, tmp_db)
+        except Exception:
+            pass
+    if tmp_db.exists():
+        DB_PATH = tmp_db
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': DB_PATH,
     }
 }
 
