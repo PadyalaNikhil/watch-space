@@ -7,7 +7,7 @@ import secrets
 import time
 from django.conf import settings
 from django.db import IntegrityError
-from django.http import JsonResponse, HttpResponse, StreamingHttpResponse
+from django.http import JsonResponse, HttpResponse, StreamingHttpResponse, Http404
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
@@ -652,11 +652,86 @@ def watch_spaces_list_create(request):
     return JsonResponse({'watchSpaces': data})
 
 
-def watch_space_detail(request, room_id_or_code):
-    # Lookup by id or invite code
-    space = WatchSpace.objects.filter(id=room_id_or_code).first()
+def resolve_watch_space(query):
+    """
+    Flexible resolver for WatchSpace instances by:
+    - ID (e.g. 'ws_88231', case-insensitive, with/without 'ws_', 'ws-')
+    - Invite code (e.g. 'NX-4Q7K', case-insensitive, with/without 'NX-', with/without hyphen)
+    - Full or relative URL (e.g. 'http://localhost:8000/join/NX-4Q7K', '/join/NX-4Q7K')
+    - Unicode dashes, whitespace around hyphens, quotes
+    - Room name match (exact or case-insensitive contains)
+    """
+    if not query:
+        return None
+    q = str(query).strip().strip('"\'“”`#')
+    # Replace unicode hyphens with standard ASCII hyphen
+    for h in ['\u2010', '\u2011', '\u2012', '\u2013', '\u2014', '\u2015', '\u2212']:
+        q = q.replace(h, '-')
+    # If URL or path was passed, take the last non-empty path segment
+    if '/' in q:
+        parts = [p for p in q.split('/') if p]
+        if parts:
+            q = parts[-1]
+    # Remove whitespace around hyphens/underscores
+    q = re.sub(r'\s*([-_])\s*', r'\1', q).strip()
+    if not q:
+        return None
+
+    # 1. Direct ID lookup (exact or case-insensitive)
+    space = WatchSpace.objects.filter(id__iexact=q).first()
+    if space:
+        return space
+
+    # 2. Direct invite code lookup (case-insensitive)
+    space = WatchSpace.objects.filter(invite_code__iexact=q).first()
+    if space:
+        return space
+
+    # 3. If invite code was entered without 'NX-' prefix (e.g. '4Q7K', 'PVV6')
+    if not q.upper().startswith('NX-'):
+        clean_part = re.sub(r'^(NX|nx)[-_]?', '', q)
+        if clean_part:
+            space = WatchSpace.objects.filter(invite_code__iexact=f'NX-{clean_part}').first()
+            if space:
+                return space
+            space = WatchSpace.objects.filter(invite_code__iendswith=clean_part).first()
+            if space:
+                return space
+    else:
+        clean_part = q.upper().replace('NX-', '')
+        if clean_part:
+            space = WatchSpace.objects.filter(invite_code__iendswith=clean_part).first()
+            if space:
+                return space
+
+    # 4. If numeric only or ws missing underscore (e.g. '88231', 'ws88231', 'ws-88231')
+    if q.isdigit():
+        space = WatchSpace.objects.filter(id__iexact=f'ws_{q}').first()
+        if space:
+            return space
+    elif re.match(r'^ws[-_]?\d+$', q, re.I):
+        digits = re.sub(r'\D', '', q)
+        space = WatchSpace.objects.filter(id__iexact=f'ws_{digits}').first()
+        if space:
+            return space
+
+    # 5. Room name match (exact or case-insensitive contains)
+    space = WatchSpace.objects.filter(room_name__iexact=q).first()
+    if space:
+        return space
+    space = WatchSpace.objects.filter(room_name__icontains=q).first()
+    return space
+
+
+def get_watch_space_or_404(room_id_or_code):
+    space = resolve_watch_space(room_id_or_code)
     if not space:
-        space = WatchSpace.objects.filter(invite_code__iexact=room_id_or_code.strip()).first()
+        raise Http404(f"Watch space '{room_id_or_code}' not found.")
+    return space
+
+
+def watch_space_detail(request, room_id_or_code):
+    space = resolve_watch_space(room_id_or_code)
     if not space:
         return JsonResponse({'error': f'Watch space {room_id_or_code} not found.'}, status=404)
 
@@ -746,9 +821,7 @@ def watch_space_join(request, room_id_or_code):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-    space = WatchSpace.objects.filter(id=room_id_or_code).first()
-    if not space:
-        space = WatchSpace.objects.filter(invite_code__iexact=room_id_or_code.strip()).first()
+    space = resolve_watch_space(room_id_or_code)
     if not space:
         return JsonResponse({'error': f'Watch space {room_id_or_code} not found.'}, status=404)
 
@@ -814,7 +887,7 @@ def watch_space_playback(request, room_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-    space = get_object_or_404(WatchSpace, id=room_id)
+    space = get_watch_space_or_404(room_id)
     user = get_user_from_request(request)
     if not user:
         return JsonResponse({'error': 'Unauthorized'}, status=401)
@@ -840,7 +913,7 @@ def watch_space_video_upload(request, room_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-    space = get_object_or_404(WatchSpace, id=room_id)
+    space = get_watch_space_or_404(room_id)
     video_file = request.FILES.get('video') or request.FILES.get('file')
     if not video_file:
         return JsonResponse({'error': 'No video file provided.'}, status=400)
@@ -890,7 +963,7 @@ def watch_space_video_stream(request, room_id):
     Streams the shared video using HTTP 206 Partial Content with Range header support.
     Allows seeking, buffering, and chunked streaming across all viewers' HTML5 players.
     """
-    space = get_object_or_404(WatchSpace, id=room_id)
+    space = get_watch_space_or_404(room_id)
     custom_video = (space.active_variation or {}).get('custom_video')
     room_media_dir = os.path.join(settings.MEDIA_ROOT, 'watch_spaces', str(space.id))
 
@@ -972,7 +1045,7 @@ def watch_space_sync(request, room_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-    space = get_object_or_404(WatchSpace, id=room_id)
+    space = get_watch_space_or_404(room_id)
     data = json_body(request)
     client_ts = float(data.get('clientTs', space.current_playback_ts))
     rtt = float(data.get('rttMs', 30.0))
@@ -1003,7 +1076,7 @@ def watch_space_chat(request, room_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-    space = get_object_or_404(WatchSpace, id=room_id)
+    space = get_watch_space_or_404(room_id)
     user = get_user_from_request(request)
     if not user:
         return JsonResponse({'error': 'Unauthorized'}, status=401)
@@ -1049,7 +1122,7 @@ def watch_space_moderate(request, room_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-    space = get_object_or_404(WatchSpace, id=room_id)
+    space = get_watch_space_or_404(room_id)
     user = get_user_from_request(request)
     if not user or user.id != space.host.id:
         return JsonResponse({
@@ -1102,7 +1175,7 @@ def watch_space_voice(request, room_id):
     - GET: returns voice channel state and list of participants
     - POST: updates user's voice state (mute/unmute, deafen, connect/disconnect)
     """
-    space = get_object_or_404(WatchSpace, id=room_id)
+    space = get_watch_space_or_404(room_id)
     user = get_user_from_request(request)
 
     if request.method == 'GET':
@@ -1182,7 +1255,7 @@ def watch_space_end(request, room_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-    space = get_object_or_404(WatchSpace, id=room_id)
+    space = get_watch_space_or_404(room_id)
     user = get_user_from_request(request)
     if not user or user.id != space.host.id:
         return JsonResponse({'error': 'Forbidden: Only the host can end the session.'}, status=403)
@@ -1246,7 +1319,7 @@ def watch_space_end(request, room_id):
 
 
 def watch_space_analytics(request, room_id):
-    space = get_object_or_404(WatchSpace, id=room_id)
+    space = get_watch_space_or_404(room_id)
     analytics = getattr(space, 'analytics', None)
     if not analytics:
         # Create default analytics if not yet generated
@@ -1339,7 +1412,7 @@ def ai_ask_copilot(request, room_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-    space = get_object_or_404(WatchSpace, id=room_id)
+    space = get_watch_space_or_404(room_id)
     user = get_user_from_request(request)
     data = json_body(request)
     question = data.get('question', '').strip()
@@ -1388,7 +1461,7 @@ def ai_scene_context(request, room_id):
     GET /api/v1/watch-spaces/{id}/ai/context?ts={sec}
     Returns real-time context for co-pilot tab (location, on-screen characters, glossary, chips).
     """
-    space = get_object_or_404(WatchSpace, id=room_id)
+    space = get_watch_space_or_404(room_id)
     ts = int(request.GET.get('ts', space.current_playback_ts))
     context = CoPilotEngine.get_moment_scene_context(space.title, ts)
     return JsonResponse(context)
@@ -1399,7 +1472,7 @@ def ai_trivia_trigger(request, room_id):
     """
     Surfaces scheduled or on-demand trivia card.
     """
-    space = get_object_or_404(WatchSpace, id=room_id)
+    space = get_watch_space_or_404(room_id)
     ts = int(request.GET.get('ts') or space.current_playback_ts)
     card = CoPilotEngine.get_trivia_card(space.title, ts)
     if not card:
@@ -1422,7 +1495,7 @@ def ai_variation_vote(request, room_id):
     - Host can open/close vote.
     - Viewers can cast vote for options 'a' or 'b'.
     """
-    space = get_object_or_404(WatchSpace, id=room_id)
+    space = get_watch_space_or_404(room_id)
     user = get_user_from_request(request)
     data = json_body(request)
     action = data.get('action', 'vote')

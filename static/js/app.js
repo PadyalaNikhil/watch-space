@@ -740,7 +740,8 @@ function syncActiveVideoPlayerState() {
 
 async function loadWatchRoom(roomIdOrCode) {
   try {
-    const room = await apiFetch(`/api/v1/watch-spaces/${roomIdOrCode}`);
+    const cleanIdOrCode = normalizeRoomCode(roomIdOrCode);
+    const room = await apiFetch(`/api/v1/watch-spaces/${encodeURIComponent(cleanIdOrCode)}`);
     STATE.currentRoom = room;
     STATE.lastCreatedRoomId = room.id;
     localStorage.setItem('lastRoomId', room.id);
@@ -2429,11 +2430,45 @@ function copyJoinLink() {
   showToast("Invite link copied to clipboard!", "📋");
 }
 
+function normalizeRoomCode(input) {
+  if (!input) return '';
+  let str = String(input).trim().replace(/^["'“”`#]+|["'“”`#]+$/g, '');
+  // Unicode dashes to standard hyphen
+  str = str.replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g, '-');
+  // If URL or path was pasted, extract last path segment
+  if (str.includes('/')) {
+    const parts = str.split('/').filter(Boolean);
+    if (parts.length > 0) {
+      str = parts[parts.length - 1];
+    }
+  }
+  // Remove whitespace around hyphens/underscores
+  str = str.replace(/\s*([-_])\s*/g, '$1').trim();
+  // Auto-prefix NX- if 4-char suffix was entered
+  if (/^[A-Za-z0-9]{4}$/.test(str)) {
+    str = `NX-${str.toUpperCase()}`;
+  } else if (/^NX[A-Za-z0-9]{4}$/i.test(str)) {
+    str = `NX-${str.slice(2).toUpperCase()}`;
+  }
+  return str;
+}
+
 function openJoinModal() {
   if (!STATE.isAuthenticated) {
     showToast("Please sign in or create an account to join a watch space.", "🔒");
     switchView('auth');
     return;
+  }
+  const input = document.getElementById('joinInviteCodeInput');
+  if (input) {
+    const pendingCode = sessionStorage.getItem('pendingInviteCode');
+    if (pendingCode) {
+      input.value = pendingCode;
+    }
+    setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 50);
   }
   document.getElementById('joinRoomModal').style.display = 'flex';
 }
@@ -2455,24 +2490,26 @@ async function submitJoinRoom() {
     switchView('auth');
     return;
   }
-  const code = document.getElementById('joinInviteCodeInput').value.trim();
+  const rawInput = document.getElementById('joinInviteCodeInput').value;
+  const code = normalizeRoomCode(rawInput);
   if (!code) {
     showToast("Please enter an invite code", "⚠");
     return;
   }
   try {
-    await apiFetch(`/api/v1/watch-spaces/${code}/join`, { method: 'POST' });
+    const res = await apiFetch(`/api/v1/watch-spaces/${encodeURIComponent(code)}/join`, { method: 'POST' });
     closeJoinModal();
     showToast(`Joining room ${code}... micro-seeking to host position`, '⚡');
-    switchView('room', code);
+    const targetRoomId = (res && res.watchSpaceId) ? res.watchSpaceId : code;
+    switchView('room', targetRoomId);
   } catch (err) {
-    showToast(err.message, '⚠');
+    showToast(err.message || `Watch space ${code} not found.`, '⚠');
   }
 }
 
 async function joinRoomWithInviteCodeDirect(inviteCode) {
   if (!inviteCode) return;
-  const code = inviteCode.trim().toUpperCase();
+  const code = normalizeRoomCode(inviteCode);
   if (!STATE.isAuthenticated || !STATE.token) {
     sessionStorage.setItem('pendingInviteCode', code);
     showToast(`Please sign in or create an account to join Watch Space (${code}).`, "🔒");
@@ -2487,9 +2524,10 @@ async function joinRoomWithInviteCodeDirect(inviteCode) {
   }
   try {
     showToast(`Joining Watch Space (${code})...`, '⚡');
-    await apiFetch(`/api/v1/watch-spaces/${code}/join`, { method: 'POST' });
+    const res = await apiFetch(`/api/v1/watch-spaces/${encodeURIComponent(code)}/join`, { method: 'POST' });
     showToast(`Joined Watch Space (${code})! Micro-seeking to host position`, '⚡');
-    switchView('room', code);
+    const targetRoomId = (res && res.watchSpaceId) ? res.watchSpaceId : code;
+    switchView('room', targetRoomId);
   } catch (err) {
     console.warn("Direct invite join fallback:", err);
     showToast(err.message || `Watch space ${code} not found.`, '⚠');
