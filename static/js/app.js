@@ -3073,9 +3073,17 @@ async function handleAuthRegister(event) {
     if (data.otp && demoHint && codeDisplay) {
       codeDisplay.textContent = data.otp;
       demoHint.style.display = 'block';
+      const noticeSub = document.getElementById('authOtpNoticeSubtext');
+      if (noticeSub) {
+        if (data.hasSmtp && data.emailDelivered) {
+          noticeSub.textContent = `(Real email sent to ${email} via SMTP! Code also shown above).`;
+        } else {
+          noticeSub.textContent = `(Local dev mode: Click "Autofill" or enter this code. To receive real emails to your Gmail inbox, configure SMTP in .env).`;
+        }
+      }
     }
 
-    showToast(`Verification code sent to ${email}`, '✉️');
+    showToast(`Verification code: ${data.otp}`, '🔑');
 
     // In automated Playwright test runner, automatically verify OTP & complete profile to keep legacy tests running seamlessly unless manual step testing is requested
     if (window.__PLAYWRIGHT_E2E__ && !window.__MANUAL_OTP_TEST__) {

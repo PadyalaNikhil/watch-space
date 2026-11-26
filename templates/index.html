@@ -1213,8 +1213,14 @@
 
               <div id="authOtpError" class="auth-error-banner" style="display:none; background:rgba(229,9,20,0.15); border:1px solid rgba(229,9,20,0.4); color:#FF6B6B; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:16px;"></div>
 
-              <div id="authOtpDemoHint" style="display:none; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); color:#34D399; padding:8px 12px; border-radius:6px; font-size:12px; margin-bottom:16px; cursor:pointer;" onclick="autofillDemoOtp()" title="Click to fill code">
-                ✨ Verification Code: <strong id="authOtpCodeDisplay">123456</strong> (click to autofill)
+              <div id="authOtpDemoHint" style="display:none; background:rgba(229,9,20,0.12); border:1px solid rgba(229,9,20,0.35); color:#FFF; padding:12px 14px; border-radius:8px; font-size:13px; margin-bottom:18px; line-height:1.5;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span>⚡ <strong>Your OTP Code:</strong> <span id="authOtpCodeDisplay" style="font-size:18px; font-weight:800; color:#FF5A5F; letter-spacing:2px; margin-left:6px;">123456</span></span>
+                  <button type="button" onclick="autofillDemoOtp()" style="background:#E50914; color:#FFF; border:none; padding:4px 10px; border-radius:4px; font-size:11px; font-weight:700; cursor:pointer;">Autofill</button>
+                </div>
+                <div id="authOtpNoticeSubtext" style="font-size:11px; color:#A1A1AA; margin-top:6px;">
+                  (Local dev mode: Click "Autofill" or enter this code. To receive real emails to your Gmail inbox, configure SMTP in .env).
+                </div>
               </div>
 
               <div class="form-group" style="margin-bottom:20px;">

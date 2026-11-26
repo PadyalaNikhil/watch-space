@@ -80,9 +80,11 @@ def auth_send_otp(request):
     cache.set(f"otp:{email}", otp_data, timeout=600)
     OTP_STORE[email] = otp_data
 
-    # Send simulated or console email
+    # Send real SMTP email if configured, or console log
+    email_delivered = False
     try:
-        send_mail(
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@watchspaces.netflix.com')
+        sent = send_mail(
             subject="Netflix Watch Spaces — Your 6-Digit Verification Code",
             message=(
                 f"Hello,\n\n"
@@ -91,17 +93,21 @@ def auth_send_otp(request):
                 f"Enjoy synchronized viewing,\n"
                 f"The Netflix Watch Spaces Team"
             ),
-            from_email="noreply@watchspaces.netflix.com",
+            from_email=from_email,
             recipient_list=[email],
             fail_silently=True,
         )
+        email_delivered = bool(sent)
     except Exception as e:
         print(f"[Email backend notice] Could not deliver email: {e}")
 
+    has_smtp = bool(getattr(settings, 'EMAIL_HOST_USER', '') and getattr(settings, 'EMAIL_HOST_PASSWORD', ''))
     return JsonResponse({
         'success': True,
         'message': f'Verification code sent to {email}.',
-        'otp': otp_code  # Provided in response for seamless development & test execution
+        'otp': otp_code,
+        'hasSmtp': has_smtp,
+        'emailDelivered': email_delivered
     })
 
 
