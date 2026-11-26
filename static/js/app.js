@@ -522,6 +522,86 @@ const MOVIE_PLAYBACK_TRACKS = {
         ]
       }
     ]
+  },
+  't_interstellar': {
+    name: "Interstellar",
+    netflixId: "70305903",
+    netflixUrl: "https://www.netflix.com/title/70305903",
+    directVideoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+    backdrop: '/static/images/backdrop-interstellar.svg',
+    poster: '/static/images/poster-interstellar.svg',
+    duration: 10140,
+    theme: 'stranger_things',
+    dialogues: [
+      { ts: 0, text: "[Hans Zimmer's majestic pipe organ swells as stars illuminate the dark]" },
+      { ts: 24, text: "Cooper: 'We used to look up at the sky and wonder at our place in the stars.'" },
+      { ts: 60, text: "Brand: 'Love is the one thing we're capable of perceiving that transcends dimensions of time and space.'" },
+      { ts: 120, text: "TARS: 'Everybody good? Plenty of slaves for my robot colony?'" },
+      { ts: 210, text: "Cooper: 'Do not go gentle into that good night. Rage, rage against the dying of the light.'" },
+      { ts: 360, text: "Murph: 'Don't let him go, Murph... S-T-A-Y.'" }
+    ],
+    trivia: [
+      { ts: 30, sourceId: 'evt_is_01', content: "Theoretical physicist Kip Thorne calculated the exact gravitational equations for the Gargantua black hole." }
+    ]
+  },
+  't_inception': {
+    name: "Inception",
+    netflixId: "70131314",
+    netflixUrl: "https://www.netflix.com/title/70131314",
+    directVideoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    backdrop: '/static/images/backdrop-inception.svg',
+    poster: '/static/images/poster-inception.svg',
+    duration: 8880,
+    theme: 'money_heist',
+    dialogues: [
+      { ts: 0, text: "[brass horn crescendo blares as waves crash on the shore]" },
+      { ts: 20, text: "Cobb: 'What is the most resilient parasite? An idea.'" },
+      { ts: 65, text: "Arthur: 'Inception is not impossible. It's just bloody difficult.'" },
+      { ts: 140, text: "Ariadne: 'You're asking me to share dreams with you. Where does this labyrinth lead?'" },
+      { ts: 240, text: "Eames: 'You mustn't be afraid to dream a little bigger, darling.'" },
+      { ts: 340, text: "[spinning silver totem wobbles gracefully on mahogany table]" }
+    ],
+    trivia: [
+      { ts: 25, sourceId: 'evt_inc_01', content: "Christopher Nolan spent nearly ten years developing the screenplay for Inception." }
+    ]
+  },
+  't_queens_gambit': {
+    name: "The Queen's Gambit",
+    netflixId: "80234304",
+    netflixUrl: "https://www.netflix.com/title/80234304",
+    directVideoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+    backdrop: '/static/images/backdrop-queens-gambit.svg',
+    poster: '/static/images/poster-queens-gambit.svg',
+    duration: 3360,
+    theme: 'jailer',
+    dialogues: [
+      { ts: 0, text: "[delicate piano and strings trace the geometric shadows on the ceiling]" },
+      { ts: 25, text: "Mr. Shaibel: 'Chess isn't always competitive. Chess can also be beautiful.'" },
+      { ts: 80, text: "Beth: 'I feel like I'm in control of something. A whole world of 64 squares.'" },
+      { ts: 160, text: "Benny Watts: 'You visualize the board in your head. But Borgov plays the opponent.'" }
+    ],
+    trivia: [
+      { ts: 25, sourceId: 'evt_qg_01', content: "Grandmaster Garry Kasparov served as special technical advisor for every tournament game shown." }
+    ]
+  },
+  't_dark': {
+    name: "Dark",
+    netflixId: "80100172",
+    netflixUrl: "https://www.netflix.com/title/80100172",
+    directVideoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4",
+    backdrop: '/static/images/backdrop-dark.svg',
+    poster: '/static/images/poster-dark.svg',
+    duration: 3180,
+    theme: 'stranger_things',
+    dialogues: [
+      { ts: 0, text: "[haunting ticking sound of clock gears echoes in the Winden cave]" },
+      { ts: 20, text: "The Stranger: 'The distinction between past, present, and future is only a stubbornly persistent illusion.'" },
+      { ts: 80, text: "Jonas: 'The question isn't how, but when.'" },
+      { ts: 150, text: "Claudia: 'What we know is a drop. What we don't know is an ocean.'" }
+    ],
+    trivia: [
+      { ts: 20, sourceId: 'evt_dk_01', content: "Dark was the first German-language Netflix original series, winning worldwide acclaim." }
+    ]
   }
 };
 
@@ -2764,6 +2844,12 @@ function openAccountSettingsModal() {
   const localeSel = document.getElementById('settingsLocaleSelect');
   if (localeSel && u.subtitleLocale) localeSel.value = u.subtitleLocale;
 
+  switchProfileModalTab('info');
+  apiFetch('/api/v1/profile/videos').then(res => {
+    const badge = document.getElementById('profileVideoCountBadge');
+    if (badge && res.videos) badge.textContent = res.videos.length;
+  }).catch(() => {});
+
   modal.style.display = 'flex';
 }
 
@@ -2786,6 +2872,265 @@ function saveAccountSettings() {
   updateUserProfileUI();
   closeAccountSettingsModal();
   showToast("Profile and account preferences updated ✓", "👤");
+}
+
+function switchProfileModalTab(tabName) {
+  const infoTabBtn = document.getElementById('tabBtnProfileInfo');
+  const videosTabBtn = document.getElementById('tabBtnProfileVideos');
+  const infoBody = document.getElementById('profileTabInfoBody');
+  const videosBody = document.getElementById('profileTabVideosBody');
+  const saveBtn = document.getElementById('saveProfileSettingsBtn');
+
+  if (tabName === 'videos') {
+    if (infoTabBtn) infoTabBtn.classList.remove('active');
+    if (videosTabBtn) videosTabBtn.classList.add('active');
+    if (infoBody) infoBody.style.display = 'none';
+    if (videosBody) videosBody.style.display = 'block';
+    if (saveBtn) saveBtn.style.display = 'none';
+    loadProfileVideos();
+  } else {
+    if (videosTabBtn) videosTabBtn.classList.remove('active');
+    if (infoTabBtn) infoTabBtn.classList.add('active');
+    if (videosBody) videosBody.style.display = 'none';
+    if (infoBody) infoBody.style.display = 'block';
+    if (saveBtn) saveBtn.style.display = 'inline-block';
+  }
+}
+
+async function loadProfileVideos() {
+  const container = document.getElementById('profileVideosListContainer');
+  const badge = document.getElementById('profileVideoCountBadge');
+  if (!container) return;
+
+  try {
+    const res = await apiFetch('/api/v1/profile/videos');
+    const videos = res.videos || [];
+    if (badge) badge.textContent = videos.length;
+
+    if (videos.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center; padding:30px 10px; color:var(--text-muted); font-size:12px;">
+          No videos uploaded yet. Choose an MP4 or WebM video file above to upload to your personal vault!
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = videos.map(v => `
+      <div class="profile-video-card">
+        <div class="profile-video-thumb-icon">🎬</div>
+        <div class="profile-video-info">
+          <div class="profile-video-title" title="${v.title}">${v.title}</div>
+          <div class="profile-video-meta">
+            <span>📦 ${v.fileSizeFormatted}</span>
+            <span>·</span>
+            <span>📅 ${v.createdAt}</span>
+          </div>
+        </div>
+        <div class="profile-video-actions">
+          <button type="button" class="btn-stream-room" onclick="streamProfileVideo('${v.id}', '${v.title.replace(/'/g, "\\'")}', '${v.streamUrl}')" title="Stream this movie to all room viewers">
+            <span>▶</span> Stream in Room
+          </button>
+          <button type="button" class="btn-delete-video" onclick="deleteProfileVideo('${v.id}', '${v.title.replace(/'/g, "\\'")}')" title="Delete video">
+            🗑
+          </button>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.warn("Failed to load profile videos:", err);
+    container.innerHTML = `<div style="color:#EF4444; font-size:12px; padding:10px;">Failed to load videos: ${err.message}</div>`;
+  }
+}
+
+function handleProfileVideoUpload(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const progressBox = document.getElementById('profileUploadProgressBox');
+  const progressBar = document.getElementById('profileUploadProgressBar');
+  const percentText = document.getElementById('profileUploadPercent');
+  const filenameText = document.getElementById('profileUploadFilename');
+
+  if (progressBox) progressBox.style.display = 'block';
+  if (progressBar) progressBar.style.width = '0%';
+  if (percentText) percentText.textContent = '0%';
+  if (filenameText) filenameText.textContent = `Uploading "${file.name}"...`;
+
+  const formData = new FormData();
+  formData.append('video', file);
+  formData.append('title', file.name.replace(/\.[^/.]+$/, ''));
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/v1/profile/videos/upload', true);
+  if (STATE.token) {
+    xhr.setRequestHeader('Authorization', `Bearer ${STATE.token}`);
+  }
+  if (window.__PLAYWRIGHT_E2E__ && STATE.currentUser && STATE.currentUser.id) {
+    xhr.setRequestHeader('X-Demo-User', STATE.currentUser.id);
+    xhr.setRequestHeader('X-Playwright-E2E', '1');
+  }
+
+  xhr.upload.onprogress = (e) => {
+    if (e.lengthComputable) {
+      const pct = Math.round((e.loaded / e.total) * 100);
+      if (progressBar) progressBar.style.width = `${pct}%`;
+      if (percentText) percentText.textContent = `${pct}%`;
+      const loadedMb = (e.loaded / (1024 * 1024)).toFixed(1);
+      const totalMb = (e.total / (1024 * 1024)).toFixed(1);
+      if (filenameText) filenameText.textContent = `Uploading "${file.name}" (${loadedMb}MB / ${totalMb}MB)...`;
+    }
+  };
+
+  xhr.onload = () => {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      if (progressBar) progressBar.style.width = '100%';
+      if (percentText) percentText.textContent = '100%';
+      if (filenameText) filenameText.textContent = 'Uploaded successfully!';
+      showToast(`"${file.name}" uploaded to your profile video vault!`, '✓');
+      setTimeout(() => {
+        if (progressBox) progressBox.style.display = 'none';
+        loadProfileVideos();
+      }, 1000);
+    } else {
+      let errMsg = 'Upload failed';
+      try {
+        const data = JSON.parse(xhr.responseText);
+        errMsg = data.error || errMsg;
+      } catch (e) {}
+      showToast(errMsg, '⚠');
+      if (progressBox) progressBox.style.display = 'none';
+    }
+  };
+
+  xhr.onerror = () => {
+    showToast('Network error during video upload', '⚠');
+    if (progressBox) progressBox.style.display = 'none';
+  };
+
+  xhr.send(formData);
+  event.target.value = '';
+}
+
+async function deleteProfileVideo(videoId, title) {
+  if (!confirm(`Are you sure you want to delete "${title}" from your profile vault?`)) return;
+  try {
+    await apiFetch(`/api/v1/profile/videos/${videoId}`, { method: 'DELETE' });
+    showToast(`Deleted "${title}"`, '✓');
+    loadProfileVideos();
+  } catch (err) {
+    showToast(`Failed to delete: ${err.message}`, '⚠');
+  }
+}
+
+async function streamProfileVideo(videoId, title, streamUrl) {
+  closeAccountSettingsModal();
+  closeRoomProfileVideoModal();
+
+  // If currently inside an active watch room:
+  if (STATE.currentRoom && STATE.currentRoom.id && STATE.currentView === 'room') {
+    try {
+      showToast(`Setting room movie to "${title}"...`, '⚡');
+      const res = await apiFetch(`/api/v1/watch-spaces/${STATE.currentRoom.id}/set-profile-video`, {
+        method: 'POST',
+        body: JSON.stringify({ videoId })
+      });
+
+      const html5Video = document.getElementById('playerHtml5Video');
+      if (html5Video) {
+        html5Video.setAttribute('data-custom-url', res.videoUrl);
+        html5Video.src = res.videoUrl;
+        switchVideoSource('html5');
+        html5Video.currentTime = 0;
+        html5Video.play().catch(e => console.log("Play error:", e));
+      }
+      STATE.playback.currentTs = 0;
+      STATE.playback.isPlaying = true;
+      updatePlayerUI();
+
+      const noticeBanner = document.getElementById('sharedVideoNoticeBanner');
+      const noticeText = document.getElementById('sharedVideoNoticeText');
+      if (noticeBanner) {
+        if (noticeText) noticeText.textContent = `Streaming Host Movie: ${title}`;
+        noticeBanner.style.display = 'inline-flex';
+      }
+
+      showToast(`Now streaming "${title}" to all room visitors!`, '🎬');
+    } catch (err) {
+      showToast(`Failed to set room video: ${err.message}`, '⚠');
+    }
+  } else {
+    // Host is on dashboard: create a new room with this video!
+    try {
+      showToast(`Creating Watch Space for "${title}"...`, '⚡');
+      const res = await apiFetch('/api/v1/watch-spaces', {
+        method: 'POST',
+        body: JSON.stringify({
+          roomName: `${title} Watch Party`,
+          titleId: 't_stranger_things',
+          maxParticipants: 20
+        })
+      });
+
+      // Set the profile video on newly created room
+      await apiFetch(`/api/v1/watch-spaces/${res.watchSpaceId}/set-profile-video`, {
+        method: 'POST',
+        body: JSON.stringify({ videoId })
+      });
+
+      showToast(`Watch Space created! Invite Code: ${res.inviteCode}`, '✓');
+      switchView('room', res.watchSpaceId);
+    } catch (err) {
+      showToast(`Error starting space: ${err.message}`, '⚠');
+    }
+  }
+}
+
+function openRoomProfileVideoModal() {
+  const modal = document.getElementById('roomProfileVideoModal');
+  const container = document.getElementById('roomProfileVideoListContainer');
+  if (!modal || !container) return;
+
+  modal.style.display = 'flex';
+  container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);">Loading your videos...</div>';
+
+  apiFetch('/api/v1/profile/videos')
+    .then(res => {
+      const videos = res.videos || [];
+      if (videos.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:30px 10px; color:var(--text-muted); font-size:13px;">
+            No videos in your profile vault yet.<br>
+            <span style="font-size:11px;">Upload your personal movies in your Profile to stream them to your room!</span>
+          </div>
+        `;
+        return;
+      }
+      container.innerHTML = videos.map(v => `
+        <div class="profile-video-card">
+          <div class="profile-video-thumb-icon">🎬</div>
+          <div class="profile-video-info">
+            <div class="profile-video-title">${v.title}</div>
+            <div class="profile-video-meta">
+              <span>📦 ${v.fileSizeFormatted}</span>
+              <span>·</span>
+              <span>📅 ${v.createdAt}</span>
+            </div>
+          </div>
+          <button type="button" class="btn-stream-room" onclick="streamProfileVideo('${v.id}', '${v.title.replace(/'/g, "\\'")}', '${v.streamUrl}')">
+            ▶ Play in Room
+          </button>
+        </div>
+      `).join('');
+    })
+    .catch(err => {
+      container.innerHTML = `<div style="color:#EF4444; font-size:12px; padding:10px;">Failed to load videos: ${err.message}</div>`;
+    });
+}
+
+function closeRoomProfileVideoModal() {
+  const modal = document.getElementById('roomProfileVideoModal');
+  if (modal) modal.style.display = 'none';
 }
 
 async function logoutCurrentUser() {
@@ -3666,6 +4011,15 @@ window.confirmNetflixImport = confirmNetflixImport;
 window.validateAndPublishTimeline = validateAndPublishTimeline;
 window.loadContentStudio = loadContentStudio;
 window.switchUserPersona = switchUserPersona;
+
+// Profile Video Vault Global Exports
+window.switchProfileModalTab = switchProfileModalTab;
+window.loadProfileVideos = loadProfileVideos;
+window.handleProfileVideoUpload = handleProfileVideoUpload;
+window.deleteProfileVideo = deleteProfileVideo;
+window.streamProfileVideo = streamProfileVideo;
+window.openRoomProfileVideoModal = openRoomProfileVideoModal;
+window.closeRoomProfileVideoModal = closeRoomProfileVideoModal;
 
 // Voice Chat Global Exports
 window.initVoiceChannel = initVoiceChannel;

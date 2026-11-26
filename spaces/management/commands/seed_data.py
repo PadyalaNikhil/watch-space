@@ -190,6 +190,36 @@ class Command(BaseCommand):
                 "backdrop_url": "/static/images/backdrop-dark.svg"
             },
             {
+                "id": "t_interstellar",
+                "name": "Interstellar",
+                "episode_info": "Feature Film",
+                "duration_seconds": 10140,  # 2h 49m
+                "synopsis": "When Earth becomes uninhabitable, ex-NASA pilot Cooper and a crew of scientists journey through a wormhole across the galaxy to find a new home for humanity.",
+                "genres": ["Sci-Fi", "Adventure", "Drama"],
+                "match_percentage": 99,
+                "rating_tag": "PG-13",
+                "year": 2014,
+                "episodes_count": 1,
+                "resolution_badge": "IMAX 4K",
+                "poster_url": "/static/images/poster-interstellar.svg",
+                "backdrop_url": "/static/images/backdrop-interstellar.svg"
+            },
+            {
+                "id": "t_inception",
+                "name": "Inception",
+                "episode_info": "Feature Film",
+                "duration_seconds": 8880,  # 2h 28m
+                "synopsis": "A skilled extractor enters the dreams of targets to steal corporate secrets, but takes on one last impossible mission: planting an idea deep within a subconscious mind.",
+                "genres": ["Sci-Fi", "Action", "Thriller"],
+                "match_percentage": 98,
+                "rating_tag": "PG-13",
+                "year": 2010,
+                "episodes_count": 1,
+                "resolution_badge": "4K Ultra HD",
+                "poster_url": "/static/images/poster-inception.svg",
+                "backdrop_url": "/static/images/backdrop-inception.svg"
+            },
+            {
                 "id": "t_1001",
                 "name": "The Salt Road",
                 "episode_info": 'S1 · E4 "The Crossing"',

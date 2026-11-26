@@ -17,7 +17,7 @@ from django.core.mail import send_mail
 from .models import (
     WatchUser, Title, TimelineEvent, VariationOption,
     WatchSpace, WatchSpaceParticipant, ChatMessage,
-    Interaction, SessionAnalytics
+    Interaction, SessionAnalytics, UserVideo
 )
 from .auth_utils import (
     generate_jwt_token, get_user_from_request,
@@ -557,6 +557,10 @@ def watch_spaces_list_create(request):
                 title_id = 't_queens_gambit'
             elif 'dark' in low_name or 'winden' in low_name:
                 title_id = 't_dark'
+            elif 'interstellar' in low_name or 'cooper' in low_name:
+                title_id = 't_interstellar'
+            elif 'inception' in low_name or 'cobb' in low_name:
+                title_id = 't_inception'
             elif not title_id:
                 title_id = 't_stranger_things'
 
@@ -1034,6 +1038,226 @@ def watch_space_video_stream(request, room_id):
     response['Accept-Ranges'] = 'bytes'
     response['Cache-Control'] = 'no-cache'
     return response
+
+
+def profile_videos_list(request):
+    """
+    Returns list of videos uploaded by the authenticated user (Host).
+    Displayed ONLY in the user's own profile / account settings.
+    """
+    user = get_user_from_request(request)
+    if not user:
+        return JsonResponse({'error': 'Authentication required.'}, status=401)
+
+    videos = UserVideo.objects.filter(user=user)
+    data = []
+    for v in videos:
+        data.append({
+            'id': str(v.id),
+            'title': v.title,
+            'filename': v.filename,
+            'fileSize': v.file_size,
+            'fileSizeFormatted': f"{v.file_size / (1024 * 1024):.1f} MB" if v.file_size >= 1048576 else f"{v.file_size / 1024:.1f} KB",
+            'streamUrl': f"/api/v1/profile/videos/{v.id}/stream",
+            'contentType': v.content_type,
+            'createdAt': v.created_at.strftime("%b %d, %Y %I:%M %p")
+        })
+    return JsonResponse({'videos': data})
+
+
+@csrf_exempt
+def profile_video_upload(request):
+    """
+    Host uploads a movie/video into their private profile account.
+    Stored securely under media/user_videos/<user_id>/.
+    Only visible in the host's profile, but can be chosen to stream to room visitors.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    user = get_user_from_request(request)
+    if not user:
+        return JsonResponse({'error': 'Authentication required.'}, status=401)
+
+    video_file = request.FILES.get('video') or request.FILES.get('file')
+    if not video_file:
+        return JsonResponse({'error': 'No video file provided.'}, status=400)
+
+    title = request.POST.get('title', '').strip() or os.path.splitext(video_file.name)[0]
+    clean_name = re.sub(r'[^A-Za-z0-9_.-]', '_', video_file.name)
+
+    user_media_dir = os.path.join(settings.MEDIA_ROOT, 'user_videos', str(user.id))
+    os.makedirs(user_media_dir, exist_ok=True)
+
+    dest_path = os.path.join(user_media_dir, f"{int(time.time())}_{clean_name}")
+    with open(dest_path, 'wb+') as destination:
+        for chunk in video_file.chunks():
+            destination.write(chunk)
+
+    user_video = UserVideo.objects.create(
+        user=user,
+        title=title,
+        filename=video_file.name,
+        file_path=dest_path,
+        file_size=video_file.size,
+        content_type=video_file.content_type or 'video/mp4'
+    )
+
+    return JsonResponse({
+        'success': True,
+        'video': {
+            'id': str(user_video.id),
+            'title': user_video.title,
+            'filename': user_video.filename,
+            'fileSize': user_video.file_size,
+            'fileSizeFormatted': f"{user_video.file_size / (1024 * 1024):.1f} MB" if user_video.file_size >= 1048576 else f"{user_video.file_size / 1024:.1f} KB",
+            'streamUrl': f"/api/v1/profile/videos/{user_video.id}/stream",
+            'createdAt': user_video.created_at.strftime("%b %d, %Y %I:%M %p")
+        }
+    })
+
+
+@csrf_exempt
+def profile_video_delete(request, video_id):
+    if request.method not in ('DELETE', 'POST'):
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    user = get_user_from_request(request)
+    if not user:
+        return JsonResponse({'error': 'Authentication required.'}, status=401)
+
+    video = UserVideo.objects.filter(id=video_id, user=user).first()
+    if not video:
+        return JsonResponse({'error': 'Video not found.'}, status=404)
+
+    if video.file_path and os.path.exists(video.file_path):
+        try:
+            os.remove(video.file_path)
+        except Exception:
+            pass
+    video.delete()
+    return JsonResponse({'success': True})
+
+
+def profile_video_stream(request, video_id):
+    """
+    Streams the uploaded profile video using HTTP 206 Partial Content with Range header.
+    Accessible to the host and all visitors in a room where this video is set to stream.
+    """
+    video = UserVideo.objects.filter(id=video_id).first()
+    if not video or not os.path.exists(video.file_path):
+        return HttpResponse('Video not found', status=404)
+
+    file_path = video.file_path
+    file_size = os.path.getsize(file_path)
+    range_header = request.headers.get('Range', '').strip()
+    range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
+
+    content_type = video.content_type or 'video/mp4'
+    if file_path.endswith('.webm'):
+        content_type = 'video/webm'
+    elif file_path.endswith('.mkv'):
+        content_type = 'video/x-matroska'
+    elif file_path.endswith('.ogg'):
+        content_type = 'video/ogg'
+
+    def file_iterator(file_name, offset=0, length=None, chunk_size=65536):
+        with open(file_name, 'rb') as f:
+            f.seek(offset)
+            remaining = length
+            while True:
+                to_read = chunk_size if remaining is None else min(chunk_size, remaining)
+                data = f.read(to_read)
+                if not data:
+                    break
+                if remaining is not None:
+                    remaining -= len(data)
+                yield data
+                if remaining is not None and remaining <= 0:
+                    break
+
+    if range_match:
+        first_byte = int(range_match.group(1))
+        last_byte = int(range_match.group(2)) if range_match.group(2) else file_size - 1
+        if last_byte >= file_size:
+            last_byte = file_size - 1
+        length = last_byte - first_byte + 1
+
+        response = StreamingHttpResponse(
+            file_iterator(file_path, offset=first_byte, length=length),
+            status=206,
+            content_type=content_type
+        )
+        response['Content-Range'] = f'bytes {first_byte}-{last_byte}/{file_size}'
+        response['Content-Length'] = str(length)
+    else:
+        response = StreamingHttpResponse(
+            file_iterator(file_path, offset=0, length=file_size),
+            status=200,
+            content_type=content_type
+        )
+        response['Content-Length'] = str(file_size)
+
+    response['Accept-Ranges'] = 'bytes'
+    response['Cache-Control'] = 'no-cache'
+    return response
+
+
+@csrf_exempt
+def watch_space_set_profile_video(request, room_id):
+    """
+    Host sets one of their profile videos to stream live in the watch space.
+    All visitors joined with room key will immediately stream this video in sync!
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    space = get_watch_space_or_404(room_id)
+    user = get_user_from_request(request)
+    if not user:
+        return JsonResponse({'error': 'Authentication required.'}, status=401)
+
+    if str(space.host.id) != str(user.id):
+        return JsonResponse({'error': 'Only the host can set the room video.'}, status=403)
+
+    data = json_body(request)
+    video_id = data.get('videoId')
+    video = UserVideo.objects.filter(id=video_id, user=user).first()
+    if not video:
+        return JsonResponse({'error': 'Profile video not found.'}, status=404)
+
+    stream_url = f"/api/v1/profile/videos/{video.id}/stream"
+    custom_video_info = {
+        'url': stream_url,
+        'name': video.title,
+        'size': video.file_size,
+        'videoId': str(video.id),
+        'isHostProfileVideo': True
+    }
+
+    if not space.active_variation:
+        space.active_variation = {}
+    space.active_variation['custom_video'] = custom_video_info
+    space.current_playback_ts = 0.0
+    space.is_playing = True
+    space.save(update_fields=['active_variation', 'current_playback_ts', 'is_playing'])
+
+    # Announce to chat
+    ChatMessage.objects.create(
+        watch_space=space,
+        user=user,
+        msg_type='system',
+        body=f"🎬 Host shared profile movie: '{video.title}'. Viewers are now synced!",
+        ts_seconds=0
+    )
+
+    return JsonResponse({
+        'success': True,
+        'videoUrl': stream_url,
+        'videoName': video.title,
+        'playbackPosition': 0.0,
+        'isPlaying': True
+    })
 
 
 @csrf_exempt

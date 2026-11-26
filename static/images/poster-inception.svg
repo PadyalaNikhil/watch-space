@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" width="100%" height="100%">
+  <defs>
+    <linearGradient id="inc-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0f"/>
+      <stop offset="40%" stop-color="#141724"/>
+      <stop offset="100%" stop-color="#212b42"/>
+    </linearGradient>
+    <radialGradient id="inc-glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#E50914" stop-opacity="0.3"/>
+      <stop offset="70%" stop-color="#3B82F6" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="600" fill="url(#inc-bg)"/>
+  <circle cx="200" cy="240" r="160" fill="url(#inc-glow)"/>
+
+  <!-- Netflix Badge -->
+  <g transform="translate(24, 28)">
+    <path d="M0,0 L7,0 L18,32 L18,0 L24,0 L24,36 L17,36 L6,4 L6,36 L0,36 Z" fill="#E50914"/>
+    <text x="32" y="22" fill="#FFFFFF" font-family="'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="800" letter-spacing="3">FILM</text>
+  </g>
+  <rect x="310" y="28" width="66" height="20" rx="3" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+  <text x="343" y="42" fill="#FFF" font-family="sans-serif" font-size="9" font-weight="700" text-anchor="middle">4K ULTRA</text>
+
+  <!-- Folding City / Maze Geometric Lines -->
+  <g transform="translate(200, 240)" stroke="#60A5FA" stroke-width="2" fill="none" opacity="0.8">
+    <polygon points="0,-80 70,-40 70,40 0,80 -70,40 -70,-40"/>
+    <polygon points="0,-50 43,-25 43,25 0,50 -43,25 -43,-25"/>
+    <circle cx="0" cy="0" r="10" fill="#E50914" stroke="none"/>
+  </g>
+
+  <!-- Title: INCEPTION -->
+  <g transform="translate(200, 420)" text-anchor="middle">
+    <text y="0" fill="#FFFFFF" font-family="'Helvetica Neue', Arial, sans-serif" font-size="38" font-weight="900" letter-spacing="8">INCEPTION</text>
+    <text y="28" fill="#F87171" font-family="'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="800" letter-spacing="5">YOUR MIND IS THE SCENE OF THE CRIME</text>
+  </g>
+
+  <!-- Bottom info -->
+  <g transform="translate(200, 545)" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif">
+    <text y="0" fill="#46D369" font-size="13" font-weight="700">98% Match  ·  2010  ·  PG-13  ·  2h 28m</text>
+    <text y="22" fill="#CBD5E1" font-size="11" font-weight="500">Christopher Nolan  ·  Sci-Fi  ·  Heist  ·  Mind-Bending</text>
+  </g>
+</svg>

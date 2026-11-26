@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <linearGradient id="inc-bd-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#08080d"/>
+      <stop offset="50%" stop-color="#141726"/>
+      <stop offset="100%" stop-color="#0a0c14"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#inc-bd-bg)"/>
+
+  <!-- Inception folding city architecture lines -->
+  <g transform="translate(1300, 540)" stroke="#38BDF8" stroke-width="3" fill="none" opacity="0.45">
+    <polygon points="0,-240 210,-120 210,120 0,240 -210,120 -210,-120"/>
+    <polygon points="0,-160 140,-80 140,80 0,160 -140,80 -140,-80"/>
+    <polygon points="0,-80 70,-40 70,40 0,80 -70,40 -70,-40"/>
+  </g>
+  <rect width="1000" height="1080" fill="black" opacity="0.6"/>
+</svg>

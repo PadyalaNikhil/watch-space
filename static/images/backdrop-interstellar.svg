@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <linearGradient id="is-bd-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#020307"/>
+      <stop offset="50%" stop-color="#091322"/>
+      <stop offset="100%" stop-color="#040810"/>
+    </linearGradient>
+    <radialGradient id="bd-gargantua" cx="65%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#000000"/>
+      <stop offset="25%" stop-color="#0a101d"/>
+      <stop offset="38%" stop-color="#ffb74d"/>
+      <stop offset="46%" stop-color="#f59e0b" stop-opacity="0.85"/>
+      <stop offset="70%" stop-color="#3b82f6" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#is-bd-bg)"/>
+  <circle cx="1250" cy="450" r="450" fill="url(#bd-gargantua)"/>
+
+  <!-- Accretion disk rings -->
+  <ellipse cx="1250" cy="450" rx="600" ry="80" fill="none" stroke="#ffbe53" stroke-width="8" opacity="0.8"/>
+  <ellipse cx="1250" cy="450" rx="720" ry="30" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.6"/>
+
+  <!-- Left shadow vignette for UI controls -->
+  <rect width="900" height="1080" fill="black" opacity="0.6"/>
+</svg>

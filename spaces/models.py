@@ -213,3 +213,23 @@ class SessionAnalytics(models.Model):
 
     def __str__(self):
         return f"Analytics for {self.watch_space.room_name} ({self.watch_space.invite_code})"
+
+
+class UserVideo(models.Model):
+    id = models.CharField(primary_key=True, max_length=50, default=uuid.uuid4)
+    user = models.ForeignKey(WatchUser, on_delete=models.CASCADE, related_name='uploaded_videos')
+    title = models.CharField(max_length=200)
+    filename = models.CharField(max_length=255)
+    file_path = models.CharField(max_length=500)
+    file_size = models.BigIntegerField(default=0)
+    duration_seconds = models.IntegerField(default=0)
+    content_type = models.CharField(max_length=100, default='video/mp4')
+    thumbnail_url = models.CharField(max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} ({self.user.display_name})"
+

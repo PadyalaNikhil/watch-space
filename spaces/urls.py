@@ -28,12 +28,19 @@ urlpatterns = [
     path('api/v1/watch-spaces/<str:room_id>/playback', views_api.watch_space_playback, name='watch_space_playback'),
     path('api/v1/watch-spaces/<str:room_id>/video/upload', views_api.watch_space_video_upload, name='watch_space_video_upload'),
     path('api/v1/watch-spaces/<str:room_id>/video/stream', views_api.watch_space_video_stream, name='watch_space_video_stream'),
+    path('api/v1/watch-spaces/<str:room_id>/set-profile-video', views_api.watch_space_set_profile_video, name='watch_space_set_profile_video'),
     path('api/v1/watch-spaces/<str:room_id>/sync', views_api.watch_space_sync, name='watch_space_sync'),
     path('api/v1/watch-spaces/<str:room_id>/chat', views_api.watch_space_chat, name='watch_space_chat'),
     path('api/v1/watch-spaces/<str:room_id>/voice', views_api.watch_space_voice, name='watch_space_voice'),
     path('api/v1/watch-spaces/<str:room_id>/moderate', views_api.watch_space_moderate, name='watch_space_moderate'),
     path('api/v1/watch-spaces/<str:room_id>/end', views_api.watch_space_end, name='watch_space_end'),
     path('api/v1/watch-spaces/<str:room_id>/analytics', views_api.watch_space_analytics, name='watch_space_analytics'),
+
+    # Profile Video Management (Host Video Vault)
+    path('api/v1/profile/videos', views_api.profile_videos_list, name='profile_videos_list'),
+    path('api/v1/profile/videos/upload', views_api.profile_video_upload, name='profile_video_upload'),
+    path('api/v1/profile/videos/<str:video_id>', views_api.profile_video_delete, name='profile_video_delete'),
+    path('api/v1/profile/videos/<str:video_id>/stream', views_api.profile_video_stream, name='profile_video_stream'),
 
     # AI Content Engine
     path('api/v1/watch-spaces/<str:room_id>/ai/ask', views_api.ai_ask_copilot, name='ai_ask_copilot'),
