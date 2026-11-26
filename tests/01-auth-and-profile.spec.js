@@ -130,4 +130,55 @@ test.describe('Authentication & User Profile Dropdown', () => {
     await expect(page.locator('#view-home')).toBeVisible();
     await expect(page.locator('#headerAvatarBtn')).toContainText('AM');
   });
+
+  test('TC-05c: Complete 3-step Signup: Send OTP, verify OTP code, and customize user profile', async ({ page }) => {
+    await page.evaluate(() => {
+      window.switchView('auth');
+      window.__MANUAL_OTP_TEST__ = true;
+    });
+    await expect(page.locator('#view-auth')).toBeVisible();
+
+    // 1. Step 1: Open Register tab and enter credentials
+    await page.locator('#authTabRegister').click();
+    await expect(page.locator('#authRegisterStep1')).toBeVisible();
+
+    const uniqueEmail = `otp_user_${Date.now()}@netflix.com`;
+    await page.locator('#authRegisterName').fill('Marcus Vance');
+    await page.locator('#authRegisterEmail').fill(uniqueEmail);
+    await page.locator('#authRegisterPassword').fill('secretpassword123');
+
+    // Click Send Verification Code
+    await page.locator('#authRegisterSubmitBtn').click();
+
+    // 2. Step 2: Verify Step 2 is shown with OTP input
+    await expect(page.locator('#authRegisterStep2')).toBeVisible();
+    await expect(page.locator('#authOtpTargetEmail')).toContainText(uniqueEmail);
+
+    // Enter 6-digit verification code
+    const otpInput = page.locator('#authOtpInput');
+    await expect(otpInput).toBeVisible();
+    await otpInput.fill('123456');
+
+    // Click Verify Code
+    await page.locator('#authVerifyOtpBtn').click();
+
+    // 3. Step 3: Verify Step 3 Profile Setup is shown
+    await expect(page.locator('#authRegisterStep3')).toBeVisible();
+    const profileName = page.locator('#authProfileName');
+    await expect(profileName).toBeVisible();
+    await expect(profileName).toHaveValue('Marcus Vance');
+
+    // Select blue avatar color
+    const blueChip = page.locator('.avatar-color-chip[data-color="#3B82F6"]');
+    if (await blueChip.count() > 0) {
+      await blueChip.click();
+    }
+
+    // Complete profile
+    await page.locator('#authCompleteProfileBtn').click();
+
+    // Verify redirected to Home dashboard and profile avatar displays MV
+    await expect(page.locator('#view-home')).toBeVisible();
+    await expect(page.locator('#headerAvatarBtn')).toContainText('MV');
+  });
 });

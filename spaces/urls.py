@@ -4,6 +4,8 @@ from . import views_api, views_frontend
 urlpatterns = [
     # Auth
     path('api/v1/auth/register', views_api.auth_register, name='auth_register'),
+    path('api/v1/auth/signup/send-otp', views_api.auth_send_otp, name='auth_send_otp'),
+    path('api/v1/auth/signup/verify-otp', views_api.auth_verify_otp, name='auth_verify_otp'),
     path('api/v1/auth/login', views_api.auth_login, name='auth_login'),
     path('api/v1/auth/logout', views_api.auth_logout, name='auth_logout'),
     path('api/v1/auth/me', views_api.auth_me, name='auth_me'),

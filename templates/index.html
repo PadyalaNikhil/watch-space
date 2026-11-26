@@ -1155,43 +1155,138 @@
             </form>
           </div>
 
-          <!-- CREATE ACCOUNT (REGISTER) FORM CONTAINER -->
+          <!-- CREATE ACCOUNT (REGISTER) FORM CONTAINER (3-Step Progressive Onboarding) -->
           <div id="authRegisterContainer" style="display:none;">
-            <h2 class="auth-h2" style="font-family:var(--font-serif); font-size:30px; font-weight:700; color:#FFF; margin-bottom:6px;">Create account.</h2>
-            <p class="auth-sub" style="font-size:13px; color:var(--text-secondary); margin-bottom:20px;">Join synchronized watch spaces, live chat, and AI co-pilots.</p>
+            
+            <!-- STEP 1: Enter Email & Password -->
+            <div id="authRegisterStep1">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span class="modal-step-tag" style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px;">Step 1 of 3 · Credentials</span>
+              </div>
+              <h2 class="auth-h2" style="font-family:var(--font-serif); font-size:28px; font-weight:700; color:#FFF; margin-bottom:6px;">Create account.</h2>
+              <p class="auth-sub" style="font-size:13px; color:var(--text-secondary); margin-bottom:18px;">Enter your email to receive an OTP verification code.</p>
 
-            <div id="authRegisterError" class="auth-error-banner" style="display:none; background:rgba(229,9,20,0.15); border:1px solid rgba(229,9,20,0.4); color:#FF6B6B; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:16px;"></div>
+              <div id="authRegisterError" class="auth-error-banner" style="display:none; background:rgba(229,9,20,0.15); border:1px solid rgba(229,9,20,0.4); color:#FF6B6B; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:16px;"></div>
 
-            <form id="authRegisterForm" onsubmit="event.preventDefault(); handleAuthRegister(event); return false;">
-              <div class="form-group" style="margin-bottom:14px;">
-                <label class="form-label" for="authRegisterName" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Full Name</label>
-                <input type="text" id="authRegisterName" class="form-input" placeholder="e.g. Alex Chen" required autocomplete="name" style="width:100%; padding:12px 14px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;" />
+              <form id="authRegisterForm" onsubmit="event.preventDefault(); handleAuthRegister(event); return false;">
+                <div class="form-group" style="margin-bottom:14px;">
+                  <label class="form-label" for="authRegisterName" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Full Name</label>
+                  <input type="text" id="authRegisterName" class="form-input" placeholder="e.g. Alex Chen" required autocomplete="name" style="width:100%; padding:12px 14px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;" />
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                  <label class="form-label" for="authRegisterEmail" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Email Address</label>
+                  <input type="email" id="authRegisterEmail" class="form-input" placeholder="alex@netflix.com" required autocomplete="email" style="width:100%; padding:12px 14px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;" />
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                  <label class="form-label" for="authRegisterPassword" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Password</label>
+                  <input type="password" id="authRegisterPassword" class="form-input" placeholder="Minimum 4 characters" required autocomplete="new-password" minlength="4" style="width:100%; padding:12px 14px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;" />
+                </div>
+                <div class="form-group" style="margin-bottom:20px;">
+                  <label class="form-label" for="authRegisterRole" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Role</label>
+                  <select id="authRegisterRole" class="form-input" style="width:100%; padding:12px 14px; background:#111; border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;">
+                    <option value="viewer" selected>Viewer (Join &amp; participate in rooms)</option>
+                    <option value="host">Host (Host rooms &amp; control playback)</option>
+                  </select>
+                </div>
+                <button type="submit" id="authRegisterSubmitBtn" class="btn-primary" style="width:100%; justify-content:center; padding:13px; font-size:14px; font-weight:700; border-radius:6px; cursor:pointer;">
+                  Send Verification Code &gt;
+                </button>
+                <div style="text-align:center; margin-top:14px; margin-bottom:12px; font-size:13px; color:#A1A1AA;">
+                  Already have an account?
+                  <button type="button" id="authSwitchToSignInBtn" onclick="switchAuthTab('signin')" style="background:none; border:none; color:#FFF; font-weight:700; text-decoration:underline; cursor:pointer; font-size:13px; padding:0; margin-left:4px;">
+                    Sign in
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- STEP 2: Enter & Verify OTP Code -->
+            <div id="authRegisterStep2" style="display:none;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span class="modal-step-tag" style="font-size:11px; font-weight:800; color:#10B981; text-transform:uppercase; letter-spacing:0.8px;">Step 2 of 3 · Verification</span>
+                <span style="font-size:11px; color:#A1A1AA;">Code sent</span>
               </div>
-              <div class="form-group" style="margin-bottom:14px;">
-                <label class="form-label" for="authRegisterEmail" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Email Address</label>
-                <input type="email" id="authRegisterEmail" class="form-input" placeholder="alex@netflix.com" required autocomplete="email" style="width:100%; padding:12px 14px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;" />
+              <h2 class="auth-h2" style="font-family:var(--font-serif); font-size:28px; font-weight:700; color:#FFF; margin-bottom:6px;">Verify your email.</h2>
+              <p class="auth-sub" style="font-size:13px; color:var(--text-secondary); margin-bottom:18px;">
+                Enter the 6-digit code sent to <strong id="authOtpTargetEmail" style="color:#FFF;">your email</strong>.
+              </p>
+
+              <div id="authOtpError" class="auth-error-banner" style="display:none; background:rgba(229,9,20,0.15); border:1px solid rgba(229,9,20,0.4); color:#FF6B6B; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:16px;"></div>
+
+              <div id="authOtpDemoHint" style="display:none; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); color:#34D399; padding:8px 12px; border-radius:6px; font-size:12px; margin-bottom:16px; cursor:pointer;" onclick="autofillDemoOtp()" title="Click to fill code">
+                ✨ Verification Code: <strong id="authOtpCodeDisplay">123456</strong> (click to autofill)
               </div>
-              <div class="form-group" style="margin-bottom:14px;">
-                <label class="form-label" for="authRegisterPassword" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Password</label>
-                <input type="password" id="authRegisterPassword" class="form-input" placeholder="Minimum 4 characters" required autocomplete="new-password" minlength="4" style="width:100%; padding:12px 14px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;" />
-              </div>
+
               <div class="form-group" style="margin-bottom:20px;">
-                <label class="form-label" for="authRegisterRole" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Role</label>
-                <select id="authRegisterRole" class="form-input" style="width:100%; padding:12px 14px; background:#111; border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;">
-                  <option value="viewer" selected>Viewer (Join &amp; participate in rooms)</option>
-                  <option value="host">Host (Host rooms &amp; control playback)</option>
-                </select>
+                <label class="form-label" for="authOtpInput" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">6-Digit OTP Code</label>
+                <input type="text" id="authOtpInput" class="form-input" maxlength="6" placeholder="• • • • • •" autocomplete="one-time-code" style="width:100%; text-align:center; font-size:22px; font-weight:800; letter-spacing:8px; padding:12px 14px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.25); border-radius:6px; color:#FFF;" oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
               </div>
-              <button type="submit" id="authRegisterSubmitBtn" class="btn-primary" onclick="handleAuthRegister(event)" style="width:100%; justify-content:center; padding:13px; font-size:14px; font-weight:700; border-radius:6px; cursor:pointer;">
-                Create account &gt;
+
+              <button type="button" id="authVerifyOtpBtn" onclick="handleVerifySignupOtp()" class="btn-primary" style="width:100%; justify-content:center; padding:13px; font-size:14px; font-weight:700; border-radius:6px; cursor:pointer;">
+                Verify Code &gt;
               </button>
-              <div style="text-align:center; margin-top:14px; margin-bottom:12px; font-size:13px; color:#A1A1AA;">
-                Already have an account?
-                <button type="button" id="authSwitchToSignInBtn" onclick="switchAuthTab('signin')" style="background:none; border:none; color:#FFF; font-weight:700; text-decoration:underline; cursor:pointer; font-size:13px; padding:0; margin-left:4px;">
-                  Sign in
+
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; font-size:12px;">
+                <button type="button" id="authResendOtpBtn" onclick="handleResendSignupOtp()" style="background:none; border:none; color:#FFF; font-weight:700; text-decoration:underline; cursor:pointer; padding:0;">
+                  Resend code
+                </button>
+                <button type="button" onclick="backToSignupStep1()" style="background:none; border:none; color:#A1A1AA; text-decoration:underline; cursor:pointer; padding:0;">
+                  Change email
                 </button>
               </div>
-            </form>
+            </div>
+
+            <!-- STEP 3: Create & Customize Profile -->
+            <div id="authRegisterStep3" style="display:none;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span class="modal-step-tag" style="font-size:11px; font-weight:800; color:#8B5CF6; text-transform:uppercase; letter-spacing:0.8px;">Step 3 of 3 · Profile Setup</span>
+                <span style="font-size:11px; color:#10B981;">✓ Verified</span>
+              </div>
+              <h2 class="auth-h2" style="font-family:var(--font-serif); font-size:28px; font-weight:700; color:#FFF; margin-bottom:6px;">Create your profile.</h2>
+              <p class="auth-sub" style="font-size:13px; color:var(--text-secondary); margin-bottom:18px;">Personalize how you appear to others in watch spaces.</p>
+
+              <div id="authProfileError" class="auth-error-banner" style="display:none; background:rgba(229,9,20,0.15); border:1px solid rgba(229,9,20,0.4); color:#FF6B6B; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:16px;"></div>
+
+              <!-- Avatar Live Preview & Color Chips -->
+              <div style="display:flex; align-items:center; gap:16px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px 14px; margin-bottom:18px;">
+                <div id="authProfileAvatarPreview" style="width:48px; height:48px; min-width:48px; border-radius:50%; background:#E50914; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; color:#FFF; box-shadow:0 4px 14px rgba(0,0,0,0.6);">
+                  AM
+                </div>
+                <div style="flex:1;">
+                  <div style="font-size:11px; font-weight:700; color:#A1A1AA; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Avatar Color</div>
+                  <div class="avatar-color-picker-row" style="display:flex; gap:8px;">
+                    <div class="avatar-color-chip active" data-color="#E50914" onclick="selectProfileAvatarColor('#E50914')" style="width:22px; height:22px; border-radius:50%; background:#E50914; cursor:pointer; border:2px solid #FFF;"></div>
+                    <div class="avatar-color-chip" data-color="#3B82F6" onclick="selectProfileAvatarColor('#3B82F6')" style="width:22px; height:22px; border-radius:50%; background:#3B82F6; cursor:pointer; border:2px solid transparent;"></div>
+                    <div class="avatar-color-chip" data-color="#10B981" onclick="selectProfileAvatarColor('#10B981')" style="width:22px; height:22px; border-radius:50%; background:#10B981; cursor:pointer; border:2px solid transparent;"></div>
+                    <div class="avatar-color-chip" data-color="#F59E0B" onclick="selectProfileAvatarColor('#F59E0B')" style="width:22px; height:22px; border-radius:50%; background:#F59E0B; cursor:pointer; border:2px solid transparent;"></div>
+                    <div class="avatar-color-chip" data-color="#8B5CF6" onclick="selectProfileAvatarColor('#8B5CF6')" style="width:22px; height:22px; border-radius:50%; background:#8B5CF6; cursor:pointer; border:2px solid transparent;"></div>
+                    <div class="avatar-color-chip" data-color="#EC4899" onclick="selectProfileAvatarColor('#EC4899')" style="width:22px; height:22px; border-radius:50%; background:#EC4899; cursor:pointer; border:2px solid transparent;"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom:14px;">
+                <label class="form-label" for="authProfileName" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Display Name</label>
+                <input type="text" id="authProfileName" class="form-input" placeholder="e.g. Alex Mercer" required oninput="updateProfileAvatarPreview()" style="width:100%; padding:12px 14px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;" />
+              </div>
+
+              <div class="form-group" style="margin-bottom:20px;">
+                <label class="form-label" for="authProfileLocale" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Preferred Audio &amp; Subtitles</label>
+                <select id="authProfileLocale" class="form-input" style="width:100%; padding:12px 14px; background:#111; border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;">
+                  <option value="en-US" selected>English (en-US)</option>
+                  <option value="es-ES">Spanish (Español)</option>
+                  <option value="hi-IN">Hindi (हिंदी)</option>
+                  <option value="fr-FR">French (Français)</option>
+                  <option value="ja-JP">Japanese (日本語)</option>
+                  <option value="de-DE">German (Deutsch)</option>
+                </select>
+              </div>
+
+              <button type="button" id="authCompleteProfileBtn" onclick="handleCompleteProfile()" class="btn-primary" style="width:100%; justify-content:center; padding:13px; font-size:14px; font-weight:700; border-radius:6px; cursor:pointer;">
+                Complete Profile &amp; Start Watching &gt;
+              </button>
+            </div>
+
           </div>
 
           <p class="auth-disclaimer" style="font-size:12px; color:#71717A; line-height:1.45; margin-top:20px; text-align:center;">
