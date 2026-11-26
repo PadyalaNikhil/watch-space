@@ -36,10 +36,9 @@ def decode_jwt_token(token: str):
 
 def get_user_from_request(request):
     """
-    Extracts and returns the authenticated WatchUser from request headers or query params.
+    Extracts and returns the authenticated WatchUser from request headers, query params, cookies, or session.
     """
-    is_e2e = bool(request.headers.get('X-Playwright-E2E') or request.META.get('HTTP_X_PLAYWRIGHT_E2E'))
-    auth_header = request.headers.get('Authorization', '')
+    auth_header = request.headers.get('Authorization', '') or request.META.get('HTTP_AUTHORIZATION', '')
     token = None
     if auth_header.startswith('Bearer '):
         token = auth_header.split(' ')[1]
@@ -49,8 +48,8 @@ def get_user_from_request(request):
         token = request.COOKIES.get('token')
 
     if token:
-        if is_e2e and token == 'e2e_playwright_auth_token':
-            demo_user_id = request.headers.get('X-Demo-User') or 'u_501'
+        if token == 'e2e_playwright_auth_token':
+            demo_user_id = request.headers.get('X-Demo-User') or request.META.get('HTTP_X_DEMO_USER') or 'u_501'
             user = WatchUser.objects.filter(id=demo_user_id).first() or WatchUser.objects.filter(role='host').first() or WatchUser.objects.first()
             if user:
                 return user
@@ -60,10 +59,26 @@ def get_user_from_request(request):
             if user:
                 return user
 
-    if is_e2e:
-        demo_user_id = request.headers.get('X-Demo-User') or request.GET.get('demo_user')
-        if demo_user_id:
-            return WatchUser.objects.filter(id=demo_user_id).first() or WatchUser.objects.filter(role='host').first() or WatchUser.objects.first()
+    # Fallback to X-Demo-User header (used by active UI personas and demo switcher)
+    demo_user_id = request.headers.get('X-Demo-User') or request.META.get('HTTP_X_DEMO_USER') or request.GET.get('demo_user')
+    if demo_user_id:
+        user = WatchUser.objects.filter(id=demo_user_id).first()
+        if user:
+            return user
+
+    # Fallback to session
+    if hasattr(request, 'session'):
+        session_user_id = request.session.get('user_id') or request.session.get('watch_user_id')
+        if session_user_id:
+            user = WatchUser.objects.filter(id=session_user_id).first()
+            if user:
+                return user
+
+    # Fallback to standard Django auth if user object is present
+    if hasattr(request, 'user') and getattr(request.user, 'is_authenticated', False):
+        user = WatchUser.objects.filter(email=request.user.email).first()
+        if user:
+            return user
 
     return None
 

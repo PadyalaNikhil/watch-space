@@ -80,11 +80,14 @@ async function apiFetch(endpoint, options = {}) {
   if (!headers['Content-Type'] && !(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }
-  if (STATE.token) {
-    headers['Authorization'] = `Bearer ${STATE.token}`;
+  const token = STATE.token || localStorage.getItem('token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
-  if (window.__PLAYWRIGHT_E2E__ && STATE.currentUser && STATE.currentUser.id) {
+  if (STATE.currentUser && STATE.currentUser.id) {
     headers['X-Demo-User'] = STATE.currentUser.id;
+  }
+  if (window.__PLAYWRIGHT_E2E__) {
     headers['X-Playwright-E2E'] = '1';
   }
 
@@ -727,10 +730,16 @@ function handleLocalVideoUpload(event) {
 
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `/api/v1/watch-spaces/${STATE.currentRoom.id}/video/upload`, true);
-    if (STATE.token) {
-      xhr.setRequestHeader('Authorization', `Bearer ${STATE.token}`);
+    const token = STATE.token || localStorage.getItem('token');
+    if (token) {
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
     }
-    xhr.setRequestHeader('X-Demo-User', STATE.currentUser.id);
+    if (STATE.currentUser && STATE.currentUser.id) {
+      xhr.setRequestHeader('X-Demo-User', STATE.currentUser.id);
+    }
+    if (window.__PLAYWRIGHT_E2E__) {
+      xhr.setRequestHeader('X-Playwright-E2E', '1');
+    }
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) {
@@ -752,15 +761,29 @@ function handleLocalVideoUpload(event) {
           if (progressBanner) progressBanner.style.display = 'none';
         }, 3000);
       } else {
-        if (progressTitle) progressTitle.textContent = 'Upload note: Viewers will stream local copy';
+        let errMsg = `Upload failed (${xhr.status})`;
+        try {
+          const data = JSON.parse(xhr.responseText);
+          errMsg = data.error || errMsg;
+        } catch (e) {
+          if (xhr.status === 413 || (xhr.responseText && xhr.responseText.includes('RequestDataTooBig'))) {
+            errMsg = 'File is too large for the server upload limit.';
+          } else if (xhr.statusText) {
+            errMsg = xhr.statusText;
+          }
+        }
+        showToast(`Video upload failed: ${errMsg}`, '⚠');
+        if (progressTitle) progressTitle.textContent = `Upload issue: ${errMsg}`;
+        if (progressText) progressText.textContent = 'Local playback continues for host.';
         setTimeout(() => {
           if (progressBanner) progressBanner.style.display = 'none';
-        }, 4000);
+        }, 5000);
       }
     };
 
     xhr.onerror = () => {
       console.warn("Upload error:", xhr.statusText);
+      showToast('Network error during video upload. Please check connection.', '⚠');
       if (progressBanner) progressBanner.style.display = 'none';
     };
 
@@ -2963,11 +2986,14 @@ function handleProfileVideoUpload(event) {
 
   const xhr = new XMLHttpRequest();
   xhr.open('POST', '/api/v1/profile/videos/upload', true);
-  if (STATE.token) {
-    xhr.setRequestHeader('Authorization', `Bearer ${STATE.token}`);
+  const token = STATE.token || localStorage.getItem('token');
+  if (token) {
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
   }
-  if (window.__PLAYWRIGHT_E2E__ && STATE.currentUser && STATE.currentUser.id) {
+  if (STATE.currentUser && STATE.currentUser.id) {
     xhr.setRequestHeader('X-Demo-User', STATE.currentUser.id);
+  }
+  if (window.__PLAYWRIGHT_E2E__) {
     xhr.setRequestHeader('X-Playwright-E2E', '1');
   }
 
@@ -2993,18 +3019,32 @@ function handleProfileVideoUpload(event) {
         loadProfileVideos();
       }, 1000);
     } else {
-      let errMsg = 'Upload failed';
+      let errMsg = `Upload failed (${xhr.status})`;
       try {
         const data = JSON.parse(xhr.responseText);
         errMsg = data.error || errMsg;
-      } catch (e) {}
+      } catch (e) {
+        if (xhr.status === 413 || (xhr.responseText && xhr.responseText.includes('RequestDataTooBig'))) {
+          errMsg = 'File is too large for the server upload limit.';
+        } else if (xhr.statusText) {
+          errMsg = xhr.statusText;
+        }
+      }
       showToast(errMsg, '⚠');
-      if (progressBox) progressBox.style.display = 'none';
+      if (filenameText) filenameText.textContent = `❌ ${errMsg}`;
+      setTimeout(() => {
+        if (progressBox) progressBox.style.display = 'none';
+      }, 4000);
     }
   };
 
   xhr.onerror = () => {
-    showToast('Network error during video upload', '⚠');
+    showToast('Network error during video upload. Please check connection.', '⚠');
+    if (filenameText) filenameText.textContent = '❌ Upload failed due to network error.';
+    setTimeout(() => {
+      if (progressBox) progressBox.style.display = 'none';
+    }, 4000);
+  };
     if (progressBox) progressBox.style.display = 'none';
   };
 
