@@ -6,3 +6,11 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# Python & Environment
+__pycache__/
+*.pyc
+.venv/
+debug.log
+media/
+

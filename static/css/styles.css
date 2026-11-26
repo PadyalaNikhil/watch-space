@@ -53,6 +53,11 @@
   padding: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
 body {
   background-color: var(--bg-main);
   color: var(--text-primary);
@@ -109,6 +114,19 @@ input, select, textarea {
 /* ==========================================================================
    HEADER / NAVIGATION
    ========================================================================== */
+.view-container {
+  display: none;
+  width: 100%;
+}
+
+.view-container.active-view {
+  display: block;
+}
+
+#view-room.active-view {
+  display: flex;
+}
+
 .main-header {
   height: 68px;
   background: linear-gradient(180deg, rgba(11, 11, 14, 0.95) 0%, rgba(11, 11, 14, 0.7) 80%, transparent 100%);
@@ -131,14 +149,129 @@ input, select, textarea {
 }
 
 .main-header.auth-header-mode {
-  background: transparent !important;
-  border-bottom: none !important;
-  backdrop-filter: none !important;
+  display: none !important;
 }
 
-.main-header.auth-header-mode .nav-links,
-.main-header.auth-header-mode .header-right {
-  display: none !important;
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Video Upload & Shared Movie Stream Banners */
+.video-upload-progress-banner {
+  position: absolute;
+  top: 60px;
+  left: 24px;
+  right: 24px;
+  background: rgba(15, 15, 20, 0.88);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(229, 9, 20, 0.4);
+  border-radius: 8px;
+  padding: 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 25;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  animation: slideDownFade 0.3s ease;
+}
+
+.upload-progress-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-progress-icon {
+  font-size: 20px;
+  color: #E50914;
+}
+
+.upload-progress-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.upload-progress-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.upload-progress-sub {
+  font-size: 11px;
+  color: #A1A1AA;
+}
+
+.upload-progress-bar-wrap {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.upload-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #E50914, #FF5555);
+  border-radius: 3px;
+  transition: width 0.2s ease;
+}
+
+.shared-video-notice-banner {
+  position: absolute;
+  top: 60px;
+  left: 24px;
+  background: rgba(15, 15, 20, 0.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 8px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 25;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  animation: slideDownFade 0.3s ease;
+}
+
+.shared-banner-icon {
+  font-size: 16px;
+}
+
+.shared-banner-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+.shared-banner-badge {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  background: rgba(16, 185, 129, 0.2);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .brand-wrapper {
@@ -1244,7 +1377,8 @@ input, select, textarea {
 .watch-room-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: calc(100vh - 68px);
+  margin-top: 68px;
   background: #070709;
   overflow: hidden;
 }
@@ -1258,6 +1392,7 @@ input, select, textarea {
   justify-content: space-between;
   padding: 0 24px;
   z-index: 50;
+  scroll-margin-top: 80px;
 }
 
 .room-header-left {
@@ -3608,7 +3743,20 @@ input, select, textarea {
 }
 
 @media (max-width: 768px) {
-  .main-header {
+  .view-container {
+  display: none;
+  width: 100%;
+}
+
+.view-container.active-view {
+  display: block;
+}
+
+#view-room.active-view {
+  display: flex;
+}
+
+.main-header {
     padding: 0 20px;
   }
   .nav-links {

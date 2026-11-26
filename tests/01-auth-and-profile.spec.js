@@ -5,7 +5,29 @@ test.describe('Authentication & User Profile Dropdown', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
-    await expect(page.locator('#headerAvatarBtn')).toBeVisible();
+  });
+
+  test('TC-00: Unauthenticated visitors start directly on login and signup page', async ({ browser }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.addInitScript(() => {
+      localStorage.clear();
+      localStorage.setItem('isLoggedOut', 'true');
+    });
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page.locator('#view-auth')).toBeVisible();
+    await expect(page.locator('.main-header')).toBeHidden();
+    await expect(page.locator('#authLoginForm')).toBeVisible();
+    await expect(page.locator('#authTabSignIn')).toBeVisible();
+    await expect(page.locator('#authTabRegister')).toBeVisible();
+    await context.close();
+  });
+
+  test('TC-Join: Friend opens /join/:code directly and connects to watch room without 404', async ({ page }) => {
+    await page.goto('/join/NX-C4LN');
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page.locator('#view-room')).toBeVisible();
   });
 
   test('TC-01: Verify navbar displays the logged-in user avatar initials', async ({ page }) => {

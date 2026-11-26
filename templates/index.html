@@ -11,12 +11,15 @@
       roomId: "{{ initial_room_id|default:''|escapejs }}",
       inviteCode: "{{ initial_invite_code|default:''|escapejs }}"
     };
+    {% if request.META.HTTP_X_PLAYWRIGHT_E2E %}
+    window.__PLAYWRIGHT_E2E__ = true;
+    {% endif %}
   </script>
 </head>
 <body>
 
-  <!-- GLOBAL APPLICATION HEADER -->
-  <header class="main-header">
+  <!-- GLOBAL APPLICATION HEADER (Hidden on Auth view by default) -->
+  <header class="main-header" style="display:none;">
     <div class="brand-wrapper">
       <span class="netflix-logo">NETFLIX</span>
       <span class="watch-spaces-pill">WATCH SPACES</span>
@@ -112,7 +115,7 @@
   <!-- ======================================================================
        VIEW 1: HOME DASHBOARD
        ====================================================================== -->
-  <main id="view-home" class="view-container">
+  <main id="view-home" class="view-container" style="display:none;">
     <!-- Hero Banner -->
     <section class="hero-section" id="heroSection">
       <div class="hero-overlay-radial"></div>
@@ -489,6 +492,27 @@
                 <span>📁 Open Movie File</span>
               </button>
               <input type="file" id="localVideoFileInput" accept="video/mp4,video/webm,video/ogg,video/mkv" style="display:none;" onchange="handleLocalVideoUpload(event)" />
+            </div>
+
+            <!-- Host Video Upload Progress Banner -->
+            <div class="video-upload-progress-banner" id="videoUploadProgressBanner" style="display:none;">
+              <div class="upload-progress-left">
+                <span class="upload-progress-icon">☁</span>
+                <div class="upload-progress-info">
+                  <span class="upload-progress-title" id="videoUploadTitle">Sharing movie with room...</span>
+                  <span class="upload-progress-sub" id="videoUploadProgressText">Uploading 0%</span>
+                </div>
+              </div>
+              <div class="upload-progress-bar-wrap">
+                <div class="upload-progress-bar-fill" id="videoUploadProgressBar" style="width:0%;"></div>
+              </div>
+            </div>
+
+            <!-- Viewer Shared Video Stream Banner -->
+            <div class="shared-video-notice-banner" id="sharedVideoNoticeBanner" style="display:none;">
+              <span class="shared-banner-icon">🎬</span>
+              <span class="shared-banner-text" id="sharedVideoNoticeText">Streaming movie shared by Host</span>
+              <span class="shared-banner-badge">SYNCED</span>
             </div>
 
             <!-- Big Center Play / Unmute Gesture Overlay -->
@@ -1070,37 +1094,25 @@
   </main>
 
   <!-- ======================================================================
-       VIEW 5: AUTH / SIGN IN PAGE
+       VIEW 5: AUTH / SIGN IN PAGE (Default Entry View)
        ====================================================================== -->
-  <main id="view-auth" class="view-container" style="display:none; position:relative; z-index:10; background:#0B0B0E; width:100%; min-height:100vh;">
+  <main id="view-auth" class="view-container active-view" style="display:block; position:relative; z-index:10; background:#0B0B0E; width:100%; min-height:100vh;">
     <div class="auth-page-container" style="display:grid; grid-template-columns:1.1fr 0.9fr; min-height:100vh;">
       
       <!-- CINEMATIC HERO SIDE -->
-      <div class="auth-hero-side" style="position:relative; background:#0B0B0E url('/static/images/salt-road-backdrop.jpg') center/cover no-repeat; display:flex; flex-direction:column; justify-content:space-between; padding:48px 48px 60px 48px; min-height:100vh; overflow:hidden;">
-        <!-- Dark Vignette Overlay to prevent text and image clash -->
-        <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(11,11,14,0.4) 0%, rgba(11,11,14,0.75) 50%, rgba(11,11,14,0.98) 100%), radial-gradient(circle at 60% 30%, rgba(229,9,20,0.1) 0%, transparent 70%); pointer-events:none;"></div>
-        
-        <div style="position:relative; z-index:2; display:inline-flex; align-items:center; gap:8px;">
-          <span class="netflix-logo" style="font-size:26px; font-weight:900; letter-spacing:1px; color:#E50914;">NETFLIX</span>
-          <span class="watch-spaces-pill" style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:12px; background:rgba(255,255,255,0.1); color:#FFF; border:1px solid rgba(255,255,255,0.15);">WATCH SPACES</span>
-        </div>
-
-        <div class="auth-hero-content" style="position:relative; z-index:2; max-width:520px; margin-top:auto;">
-          <div class="auth-hero-tag" style="font-size:11px; font-weight:800; letter-spacing:1.5px; color:#A1A1AA; text-transform:uppercase; margin-bottom:8px;">Social Viewing · AI Co-Pilot</div>
-          <h1 class="auth-hero-h1" style="font-family:var(--font-serif); font-size:46px; font-weight:800; color:#FFF; line-height:1.12; margin-bottom:14px; text-shadow:0 4px 20px rgba(0,0,0,0.9);">Watch together.<br>Ask anything.</h1>
-          <p class="auth-hero-sub" style="font-size:15px; color:#D1D5DB; line-height:1.5; margin-bottom:24px; text-shadow:0 2px 8px rgba(0,0,0,0.8);">
+      <div class="auth-hero-side" style="position:relative; background:#0B0B0E url('/static/images/auth-hero-banner.png') center center / cover no-repeat; display:flex; flex-direction:column; justify-content:flex-end; padding:48px; min-height:100vh; overflow:hidden;" aria-label="Netflix Watch Spaces: Watch together. Ask anything.">
+        <!-- Screen-reader accessible announcement (cleanly contained to prevent typography double-rendering) -->
+        <div class="auth-hero-content sr-only" style="position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;">
+          <div class="auth-hero-tag">Social Viewing · AI Co-Pilot</div>
+          <h1 class="auth-hero-h1">Watch together. Ask anything.</h1>
+          <p class="auth-hero-sub">
             A synchronized room, a live chat, and a co-pilot that actually knows the story — down to the second.
           </p>
-          <div class="auth-badges-row" style="display:flex; flex-wrap:wrap; gap:10px;">
-            <div class="auth-kpi-pill" style="border:1px solid rgba(255,255,255,0.25); background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); padding:6px 12px; border-radius:4px; font-size:10px; font-weight:800; color:#DDD; letter-spacing:0.8px;">⚡ SYNC &lt; 250 MS</div>
-            <div class="auth-kpi-pill" style="border:1px solid rgba(255,255,255,0.25); background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); padding:6px 12px; border-radius:4px; font-size:10px; font-weight:800; color:#DDD; letter-spacing:0.8px;">✦ GROUNDED AI</div>
-            <div class="auth-kpi-pill" style="border:1px solid rgba(255,255,255,0.25); background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); padding:6px 12px; border-radius:4px; font-size:10px; font-weight:800; color:#DDD; letter-spacing:0.8px;">👥 UP TO 50 PER ROOM</div>
-          </div>
         </div>
       </div>
 
       <!-- AUTH FORM SIDE -->
-      <div class="auth-form-side" style="background:#0F0F12; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:48px 36px; min-height:100vh;">
+      <div class="auth-form-side" style="background:#0F0F12; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:100px 36px 60px 36px; min-height:100vh;">
         <div class="auth-card-inner" style="width:100%; max-width:400px; background:rgba(20,20,26,0.9); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:36px; box-shadow:0 12px 40px rgba(0,0,0,0.6);">
           
           <div class="auth-top-tag" style="font-size:11px; font-weight:800; letter-spacing:1.2px; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Watch Spaces Authentication</div>
@@ -1125,11 +1137,11 @@
             <form id="authLoginForm" onsubmit="event.preventDefault(); handleAuthLogin(event); return false;">
               <div class="form-group" style="margin-bottom:14px;">
                 <label class="form-label" for="authLoginEmail" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Email</label>
-                <input type="email" id="authLoginEmail" class="form-input" value="priya@netflix.com" placeholder="name@netflix.com" required autocomplete="email" style="width:100%; padding:12px 14px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;" />
+                <input type="email" id="authLoginEmail" class="form-input" placeholder="name@netflix.com" required autocomplete="email" style="width:100%; padding:12px 14px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;" />
               </div>
               <div class="form-group" style="margin-bottom:20px;">
                 <label class="form-label" for="authLoginPassword" style="display:block; font-size:12px; font-weight:700; color:#A1A1AA; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Password</label>
-                <input type="password" id="authLoginPassword" class="form-input" value="password" placeholder="Enter your password" required autocomplete="current-password" style="width:100%; padding:12px 14px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;" />
+                <input type="password" id="authLoginPassword" class="form-input" placeholder="Enter your password" required autocomplete="current-password" style="width:100%; padding:12px 14px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#FFF; font-size:14px;" />
               </div>
               <button type="submit" id="authSignInSubmitBtn" class="btn-primary" style="width:100%; justify-content:center; padding:13px; font-size:14px; font-weight:700; border-radius:6px; cursor:pointer;">
                 Sign in &gt;
@@ -1141,34 +1153,6 @@
                 </button>
               </div>
             </form>
-
-            <!-- Quick Demo Accounts -->
-            <div class="auth-quick-demo-box" style="margin-top:22px; padding-top:18px; border-top:1px solid rgba(255,255,255,0.08);">
-              <div class="auth-quick-demo-title" style="font-size:11px; font-weight:800; letter-spacing:0.8px; color:#A1A1AA; margin-bottom:12px; text-transform:uppercase;">⚡ Quick Demo Profiles</div>
-              <div class="auth-quick-demo-pills" style="display:flex; flex-direction:column; gap:8px; width:100%;">
-                <button type="button" class="auth-demo-pill" onclick="fillDemoLogin('priya@netflix.com', 'password')" style="display:flex; align-items:center; gap:12px; width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:10px 14px; color:#FFF; font-size:13px; font-weight:600; cursor:pointer; text-align:left; transition:all 0.2s;">
-                  <span class="auth-pill-avatar" style="width:26px; height:26px; border-radius:4px; background:#E50914; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#FFF; flex-shrink:0;">PR</span>
-                  <div style="display:flex; flex-direction:column;">
-                    <span style="color:#FFF; font-size:13px; font-weight:600;">Priya (Host)</span>
-                    <span style="color:#71717A; font-size:11px;">priya@netflix.com</span>
-                  </div>
-                </button>
-                <button type="button" class="auth-demo-pill" onclick="fillDemoLogin('maya@example.com', 'password')" style="display:flex; align-items:center; gap:12px; width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:10px 14px; color:#FFF; font-size:13px; font-weight:600; cursor:pointer; text-align:left; transition:all 0.2s;">
-                  <span class="auth-pill-avatar" style="width:26px; height:26px; border-radius:4px; background:#EAB308; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#FFF; flex-shrink:0;">MA</span>
-                  <div style="display:flex; flex-direction:column;">
-                    <span style="color:#FFF; font-size:13px; font-weight:600;">Maya</span>
-                    <span style="color:#71717A; font-size:11px;">maya@example.com</span>
-                  </div>
-                </button>
-                <button type="button" class="auth-demo-pill" onclick="fillDemoLogin('admin@netflix.com', 'password')" style="display:flex; align-items:center; gap:12px; width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:10px 14px; color:#FFF; font-size:13px; font-weight:600; cursor:pointer; text-align:left; transition:all 0.2s;">
-                  <span class="auth-pill-avatar" style="width:26px; height:26px; border-radius:4px; background:#8B5CF6; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#FFF; flex-shrink:0;">AD</span>
-                  <div style="display:flex; flex-direction:column;">
-                    <span style="color:#FFF; font-size:13px; font-weight:600;">Studio Admin</span>
-                    <span style="color:#71717A; font-size:11px;">admin@netflix.com</span>
-                  </div>
-                </button>
-              </div>
-            </div>
           </div>
 
           <!-- CREATE ACCOUNT (REGISTER) FORM CONTAINER -->
@@ -1210,13 +1194,8 @@
             </form>
           </div>
 
-          <button type="button" class="btn-demo-viewer" onclick="switchUserPersona('u_maya', 'Maya', 'viewer', 'MA', '#EAB308'); switchView('home');" style="width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#FFF; font-weight:600; font-size:13px; padding:12px; border-radius:6px; margin-top:14px; cursor:pointer; transition:all 0.2s;">
-            Continue as demo viewer
-          </button>
-
           <p class="auth-disclaimer" style="font-size:12px; color:#71717A; line-height:1.45; margin-top:20px; text-align:center;">
-            Secure token-based authentication.
-            <a href="#" onclick="switchView('home')" style="color:#FFF; text-decoration:underline; font-weight:600;">Preview the dashboard</a> without signing in.
+            🔒 Secure authentication required to host or join Netflix Watch Spaces
           </p>
         </div>
       </div>

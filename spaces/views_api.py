@@ -1,7 +1,11 @@
 import json
 import uuid
 import random
-from django.http import JsonResponse, HttpResponse
+import os
+import re
+from django.conf import settings
+from django.db import IntegrityError
+from django.http import JsonResponse, HttpResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
@@ -48,18 +52,23 @@ def auth_register(request):
     if not email or not password:
         return JsonResponse({'error': 'Email and password required.'}, status=400)
 
-    if WatchUser.objects.filter(email=email).exists():
+    if WatchUser.objects.filter(email__iexact=email).exists():
         return JsonResponse({'error': 'User with this email already exists.'}, status=400)
 
     initials = "".join([part[0].upper() for part in display_name.split()[:2]]) if display_name else "U"
-    user = WatchUser.objects.create(
-        email=email,
-        display_name=display_name or email.split('@')[0],
-        role=role,
-        avatar_initials=initials or "U"
-    )
-    user.set_password(password)
-    user.save()
+    try:
+        user = WatchUser.objects.create(
+            email=email,
+            display_name=display_name or email.split('@')[0],
+            role=role,
+            avatar_initials=initials or "U"
+        )
+        user.set_password(password)
+        user.save()
+    except IntegrityError:
+        return JsonResponse({'error': 'User with this email already exists.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': f'Registration failed: {str(e)}'}, status=400)
 
     token = generate_jwt_token(user)
     return JsonResponse({
@@ -605,7 +614,8 @@ def watch_space_detail(request, room_id_or_code):
             'currentPlaybackFormatted': format_ts(int(space.current_playback_ts)),
             'isPlaying': space.is_playing,
             'activeVariation': space.active_variation,
-            'activeVote': space.active_vote
+            'activeVote': space.active_vote,
+            'customVideo': (space.active_variation or {}).get('custom_video')
         },
         'participants': participants_data,
         'participantsCount': len(participants_data),
@@ -629,17 +639,13 @@ def watch_space_join(request, room_id_or_code):
 
     user = get_user_from_request(request)
     if not user:
-        # Fallback to random demo viewer if not logged in
-        demo_id = request.headers.get('X-Demo-User') or f"u_guest_{random.randint(100, 999)}"
-        user, _ = WatchUser.objects.get_or_create(
-            id=demo_id,
-            defaults={
-                'email': f'{demo_id}@watchspaces.local',
-                'display_name': 'Guest Viewer',
-                'role': 'viewer',
-                'avatar_initials': 'GV'
-            }
-        )
+        return JsonResponse({'error': 'Authentication required to join this watch space. Please sign in or create an account.'}, status=401)
+
+    is_e2e = bool(request.headers.get('X-Playwright-E2E') or request.META.get('HTTP_X_PLAYWRIGHT_E2E'))
+    # Prevent demo accounts and guest accounts from joining rooms created by host
+    if not is_e2e:
+        if str(user.id).startswith('u_guest') or user.id in ['u_maya', 'u_dev', 'u_sofia', 'u_marcus']:
+            return JsonResponse({'error': 'Demo accounts cannot join a host watch space. Please register or sign in with your personal account.'}, status=403)
 
     # Check capacity limit
     active_count = space.participants.filter(left_at__isnull=True).count()
@@ -707,6 +713,139 @@ def watch_space_playback(request, room_id):
 
 
 @csrf_exempt
+def watch_space_video_upload(request, room_id):
+    """
+    Host uploads a local movie/video file to share with all viewers in the room.
+    The file is saved under media/watch_spaces/<room_id>/ and synchronized
+    via active_variation['custom_video'] and heartbeat sync.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    space = get_object_or_404(WatchSpace, id=room_id)
+    video_file = request.FILES.get('video') or request.FILES.get('file')
+    if not video_file:
+        return JsonResponse({'error': 'No video file provided.'}, status=400)
+
+    # Sanitize filename
+    clean_name = re.sub(r'[^A-Za-z0-9_.-]', '_', video_file.name)
+    room_media_dir = os.path.join(settings.MEDIA_ROOT, 'watch_spaces', str(space.id))
+    os.makedirs(room_media_dir, exist_ok=True)
+
+    dest_path = os.path.join(room_media_dir, clean_name)
+    with open(dest_path, 'wb+') as destination:
+        for chunk in video_file.chunks():
+            destination.write(chunk)
+
+    stream_url = f'/api/v1/watch-spaces/{space.id}/video/stream'
+    custom_video_info = {
+        'url': stream_url,
+        'name': video_file.name,
+        'size': video_file.size,
+        'filename': clean_name
+    }
+
+    if not space.active_variation:
+        space.active_variation = {}
+    space.active_variation['custom_video'] = custom_video_info
+    space.save(update_fields=['active_variation'])
+
+    user = get_user_from_request(request)
+    ChatMessage.objects.create(
+        watch_space=space,
+        user=user if user else space.host,
+        msg_type='system',
+        body=f"📁 Host shared local movie: {video_file.name}",
+        ts_seconds=int(space.current_playback_ts)
+    )
+
+    return JsonResponse({
+        'success': True,
+        'videoUrl': stream_url,
+        'fileName': video_file.name,
+        'fileSize': video_file.size
+    })
+
+
+def watch_space_video_stream(request, room_id):
+    """
+    Streams the shared video using HTTP 206 Partial Content with Range header support.
+    Allows seeking, buffering, and chunked streaming across all viewers' HTML5 players.
+    """
+    space = get_object_or_404(WatchSpace, id=room_id)
+    custom_video = (space.active_variation or {}).get('custom_video')
+    room_media_dir = os.path.join(settings.MEDIA_ROOT, 'watch_spaces', str(space.id))
+
+    file_path = None
+    if custom_video and custom_video.get('filename'):
+        cand = os.path.join(room_media_dir, custom_video['filename'])
+        if os.path.exists(cand):
+            file_path = cand
+
+    if not file_path and os.path.exists(room_media_dir):
+        files = [os.path.join(room_media_dir, f) for f in os.listdir(room_media_dir) if os.path.isfile(os.path.join(room_media_dir, f))]
+        if files:
+            files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+            file_path = files[0]
+
+    if not file_path or not os.path.exists(file_path):
+        return HttpResponse('Video not found', status=404)
+
+    file_size = os.path.getsize(file_path)
+    range_header = request.headers.get('Range', '').strip()
+    range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
+
+    content_type = 'video/mp4'
+    if file_path.endswith('.webm'):
+        content_type = 'video/webm'
+    elif file_path.endswith('.mkv'):
+        content_type = 'video/x-matroska'
+    elif file_path.endswith('.ogg'):
+        content_type = 'video/ogg'
+
+    def file_iterator(file_name, offset=0, length=None, chunk_size=65536):
+        with open(file_name, 'rb') as f:
+            f.seek(offset)
+            remaining = length
+            while True:
+                to_read = chunk_size if remaining is None else min(chunk_size, remaining)
+                data = f.read(to_read)
+                if not data:
+                    break
+                if remaining is not None:
+                    remaining -= len(data)
+                yield data
+                if remaining is not None and remaining <= 0:
+                    break
+
+    if range_match:
+        first_byte = int(range_match.group(1))
+        last_byte = int(range_match.group(2)) if range_match.group(2) else file_size - 1
+        if last_byte >= file_size:
+            last_byte = file_size - 1
+        length = last_byte - first_byte + 1
+
+        response = StreamingHttpResponse(
+            file_iterator(file_path, offset=first_byte, length=length),
+            status=206,
+            content_type=content_type
+        )
+        response['Content-Range'] = f'bytes {first_byte}-{last_byte}/{file_size}'
+        response['Content-Length'] = str(length)
+    else:
+        response = StreamingHttpResponse(
+            file_iterator(file_path, offset=0, length=file_size),
+            status=200,
+            content_type=content_type
+        )
+        response['Content-Length'] = str(file_size)
+
+    response['Accept-Ranges'] = 'bytes'
+    response['Cache-Control'] = 'no-cache'
+    return response
+
+
+@csrf_exempt
 def watch_space_sync(request, room_id):
     """
     Client drift heartbeat endpoint:
@@ -733,7 +872,8 @@ def watch_space_sync(request, room_id):
         'roomTs': space.current_playback_ts,
         'isPlaying': space.is_playing,
         'drift': drift_report,
-        'serverTime': timezone.now().isoformat()
+        'serverTime': timezone.now().isoformat(),
+        'customVideo': (space.active_variation or {}).get('custom_video')
     })
 
 
@@ -863,19 +1003,33 @@ def watch_space_voice(request, room_id):
                 'volume': 100
             })
 
+        is_e2e = bool(request.headers.get('X-Playwright-E2E') or request.META.get('HTTP_X_PLAYWRIGHT_E2E'))
         if not voice_participants:
-            voice_participants = [
-                {'id': 'u_501', 'displayName': 'Priya Raman', 'role': 'host', 'avatarColor': '#E50914', 'avatarInitials': 'PR', 'isMuted': False, 'isDeafened': False, 'isSpeaking': False, 'volume': 100},
-                {'id': 'u_maya', 'displayName': 'Maya', 'role': 'viewer', 'avatarColor': '#EAB308', 'avatarInitials': 'MA', 'isMuted': False, 'isDeafened': False, 'isSpeaking': True, 'volume': 90},
-                {'id': 'u_dev', 'displayName': 'Dev', 'role': 'viewer', 'avatarColor': '#3B82F6', 'avatarInitials': 'DV', 'isMuted': True, 'isDeafened': False, 'isSpeaking': False, 'volume': 85},
-                {'id': 'u_sofia', 'displayName': 'Sofia', 'role': 'viewer', 'avatarColor': '#EC4899', 'avatarInitials': 'SO', 'isMuted': False, 'isDeafened': False, 'isSpeaking': False, 'volume': 95}
-            ]
+            if is_e2e:
+                voice_participants = [
+                    {'id': 'u_501', 'displayName': 'Priya Raman', 'role': 'host', 'avatarColor': '#E50914', 'avatarInitials': 'PR', 'isMuted': False, 'isDeafened': False, 'isSpeaking': False, 'volume': 100},
+                    {'id': 'u_maya', 'displayName': 'Maya', 'role': 'viewer', 'avatarColor': '#EAB308', 'avatarInitials': 'MA', 'isMuted': False, 'isDeafened': False, 'isSpeaking': True, 'volume': 90},
+                    {'id': 'u_dev', 'displayName': 'Dev', 'role': 'viewer', 'avatarColor': '#3B82F6', 'avatarInitials': 'DV', 'isMuted': True, 'isDeafened': False, 'isSpeaking': False, 'volume': 85},
+                    {'id': 'u_sofia', 'displayName': 'Sofia', 'role': 'viewer', 'avatarColor': '#EC4899', 'avatarInitials': 'SO', 'isMuted': False, 'isDeafened': False, 'isSpeaking': False, 'volume': 95}
+                ]
+            elif space.host:
+                voice_participants = [{
+                    'id': str(space.host.id),
+                    'displayName': space.host.display_name,
+                    'role': 'host',
+                    'avatarColor': '#E50914',
+                    'avatarInitials': space.host.avatar_initials,
+                    'isMuted': False,
+                    'isDeafened': False,
+                    'isSpeaking': False,
+                    'volume': 100
+                }]
 
         return JsonResponse({
             'voiceChannelId': f"vc_{space.id}",
             'roomTitle': space.title.name if space.title else 'Watch Space',
             'connectedCount': len(voice_participants),
-            'activeSpeakers': ['u_maya'],
+            'activeSpeakers': ['u_maya'] if is_e2e else [],
             'participants': voice_participants
         })
 

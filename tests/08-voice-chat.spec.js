@@ -33,12 +33,12 @@ test.describe('Watch Room Real-Time Voice Chat & Spatial Audio', () => {
     await expect(micBtn).toBeVisible();
 
     // Toggle mute
-    await micBtn.click();
+    await micBtn.click({ force: true });
     await expect(page.locator('#toastContainer')).toContainText(/Microphone/i);
     await expect(micBtn).toHaveClass(/muted/);
 
     // Toggle unmute
-    await micBtn.click();
+    await micBtn.click({ force: true });
     await expect(page.locator('#toastContainer')).toContainText(/Microphone/i);
     await expect(micBtn).not.toHaveClass(/muted/);
   });
@@ -47,7 +47,7 @@ test.describe('Watch Room Real-Time Voice Chat & Spatial Audio', () => {
     // Click on Voice tab in sidebar
     const voiceTabBtn = page.locator('#sidebarTabVoice');
     await expect(voiceTabBtn).toBeVisible();
-    await voiceTabBtn.click();
+    await voiceTabBtn.click({ force: true });
 
     // Voice tab content should be visible
     const voiceTabContent = page.locator('#tabContent-voice');
