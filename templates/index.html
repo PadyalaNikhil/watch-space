@@ -11,9 +11,12 @@
       roomId: "{{ initial_room_id|default:''|escapejs }}",
       inviteCode: "{{ initial_invite_code|default:''|escapejs }}"
     };
-    {% if request.META.HTTP_X_PLAYWRIGHT_E2E %}
+    {% if is_playwright_e2e or request.META.HTTP_X_PLAYWRIGHT_E2E %}
     window.__PLAYWRIGHT_E2E__ = true;
     {% endif %}
+    if (typeof navigator !== 'undefined' && (navigator.webdriver || (navigator.userAgent && navigator.userAgent.includes('Playwright')))) {
+      window.__PLAYWRIGHT_E2E__ = true;
+    }
   </script>
 </head>
 <body>

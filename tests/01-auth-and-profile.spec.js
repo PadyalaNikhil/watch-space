@@ -3,6 +3,11 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Authentication & User Profile Dropdown', () => {
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      if (!window.__TEST_UNAUTHENTICATED__) {
+        try { localStorage.removeItem('isLoggedOut'); } catch (e) {}
+      }
+    });
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
   });
@@ -11,6 +16,7 @@ test.describe('Authentication & User Profile Dropdown', () => {
     const context = await browser.newContext();
     const page = await context.newPage();
     await page.addInitScript(() => {
+      window.__TEST_UNAUTHENTICATED__ = true;
       localStorage.clear();
       localStorage.setItem('isLoggedOut', 'true');
     });
