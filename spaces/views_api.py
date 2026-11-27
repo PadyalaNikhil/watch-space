@@ -924,21 +924,26 @@ def watch_space_video_upload(request, room_id):
     Host uploads a local movie/video file to share with all viewers in the room.
     The file is saved under media/watch_spaces/<room_id>/ and synchronized
     via active_variation['custom_video'] and heartbeat sync.
-    Supports video files up to 2 GB.
+    Supports large video files up to 10 GB.
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
     space = get_watch_space_or_404(room_id)
-    video_file = request.FILES.get('video') or request.FILES.get('file')
+
+    try:
+        video_file = request.FILES.get('video') or request.FILES.get('file')
+    except Exception as e:
+        return JsonResponse({'error': f'Failed reading uploaded file: {str(e)}'}, status=400)
+
     if not video_file:
         return JsonResponse({'error': 'No video file provided.'}, status=400)
 
-    # Validate file size up to 2 GB
-    MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024  # 2 GB limit
+    # Validate file size up to 10 GB
+    MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024  # 10 GB limit
     if video_file.size > MAX_FILE_SIZE:
         size_gb = video_file.size / (1024 * 1024 * 1024)
-        return JsonResponse({'error': f'File exceeds maximum allowed size of 2 GB (selected file is {size_gb:.2f} GB).'}, status=400)
+        return JsonResponse({'error': f'File exceeds maximum allowed size of 10 GB (selected file is {size_gb:.2f} GB).'}, status=400)
 
     try:
         # Sanitize filename
@@ -1095,7 +1100,7 @@ def profile_video_upload(request):
     Host uploads a movie/video into their private profile account.
     Stored securely under media/user_videos/<user_id>/.
     Only visible in the host's profile, but can be chosen to stream to room visitors.
-    Supports video files up to 2 GB.
+    Supports large video files up to 10 GB.
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -1106,15 +1111,19 @@ def profile_video_upload(request):
     if not user:
         return JsonResponse({'error': 'Authentication required.'}, status=401)
 
-    video_file = request.FILES.get('video') or request.FILES.get('file')
+    try:
+        video_file = request.FILES.get('video') or request.FILES.get('file')
+    except Exception as e:
+        return JsonResponse({'error': f'Failed reading uploaded file: {str(e)}'}, status=400)
+
     if not video_file:
         return JsonResponse({'error': 'No video file provided.'}, status=400)
 
-    # Validate file size up to 2 GB
-    MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024  # 2 GB limit
+    # Validate file size up to 10 GB
+    MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024  # 10 GB limit
     if video_file.size > MAX_FILE_SIZE:
         size_gb = video_file.size / (1024 * 1024 * 1024)
-        return JsonResponse({'error': f'File exceeds maximum allowed size of 2 GB (selected file is {size_gb:.2f} GB).'}, status=400)
+        return JsonResponse({'error': f'File exceeds maximum allowed size of 10 GB (selected file is {size_gb:.2f} GB).'}, status=400)
 
     try:
         title = request.POST.get('title', '').strip() or os.path.splitext(video_file.name)[0]

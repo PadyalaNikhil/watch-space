@@ -16,15 +16,16 @@ from spaces.views_api import format_file_size
 
 def run_tests():
     print(f"=== Testing Video Upload Limits & Auth ===")
-    print(f"DATA_UPLOAD_MAX_MEMORY_SIZE: {getattr(settings, 'DATA_UPLOAD_MAX_MEMORY_SIZE', 'Not Set')} bytes ({getattr(settings, 'DATA_UPLOAD_MAX_MEMORY_SIZE', 0) / (1024*1024*1024):.2f} GB)")
+    print(f"DATA_UPLOAD_MAX_MEMORY_SIZE: {getattr(settings, 'DATA_UPLOAD_MAX_MEMORY_SIZE', 'Not Set')}")
     print(f"FILE_UPLOAD_MAX_MEMORY_SIZE: {getattr(settings, 'FILE_UPLOAD_MAX_MEMORY_SIZE', 'Not Set')} bytes ({getattr(settings, 'FILE_UPLOAD_MAX_MEMORY_SIZE', 0) / (1024*1024):.1f} MB)")
     
-    assert getattr(settings, 'DATA_UPLOAD_MAX_MEMORY_SIZE', 0) >= 2 * 1024 * 1024 * 1024, "Limit must be at least 2GB"
+    assert getattr(settings, 'DATA_UPLOAD_MAX_MEMORY_SIZE', None) is None, "DATA_UPLOAD_MAX_MEMORY_SIZE must be None for unlimited body uploads"
 
     # Test format_file_size helper
     assert format_file_size(1500 * 1024 * 1024) == "1.46 GB"
     assert format_file_size(2 * 1024 * 1024 * 1024) == "2.00 GB"
     assert format_file_size(25 * 1024 * 1024) == "25.0 MB"
+    assert format_file_size(5 * 1024 * 1024 * 1024) == "5.00 GB"
     print("format_file_size tests passed!")
 
     client = Client()
@@ -34,20 +35,20 @@ def run_tests():
     
     token = generate_jwt_token(host_user)
 
-    # 0. Test file > 2GB rejection
-    print("\n0. Testing file > 2 GB rejection...")
+    # 0. Test file > 10 GB rejection
+    print("\n0. Testing file > 10 GB rejection...")
     from django.test import RequestFactory
     import json
     from spaces.views_api import profile_video_upload
     rf = RequestFactory()
     req = rf.post('/api/v1/profile/videos/upload', HTTP_AUTHORIZATION=f"Bearer {token}")
     oversized_file = SimpleUploadedFile("huge_movie.mp4", b"dummy_content", content_type="video/mp4")
-    oversized_file.size = 2147483648 + 1048576  # 2 GB + 1 MB
+    oversized_file.size = (10 * 1024 * 1024 * 1024) + 1048576  # 10 GB + 1 MB
     req.FILES['video'] = oversized_file
     rej_res = profile_video_upload(req)
     print(f"Oversized file response: {rej_res.status_code} - {json.loads(rej_res.content)}")
     assert rej_res.status_code == 400
-    assert "exceeds maximum allowed size of 2 GB" in json.loads(rej_res.content).get('error', '')
+    assert "exceeds maximum allowed size of 10 GB" in json.loads(rej_res.content).get('error', '')
     
     # 1. Test Large Video Upload (25 MB)
     print("\n1. Testing 25 MB video upload to profile vault...")

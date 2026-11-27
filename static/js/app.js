@@ -717,10 +717,10 @@ function handleLocalVideoUpload(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
 
-  const MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB limit
+  const MAX_UPLOAD_BYTES = 10 * 1024 * 1024 * 1024; // 10 GB limit
   if (file.size > MAX_UPLOAD_BYTES) {
     const sizeGb = (file.size / (1024 * 1024 * 1024)).toFixed(2);
-    showToast(`File is too large (${sizeGb} GB). Maximum upload limit is 2 GB.`, '⚠');
+    showToast(`File is too large (${sizeGb} GB). Maximum upload limit is 10 GB.`, '⚠');
     event.target.value = '';
     return;
   }
@@ -794,7 +794,7 @@ function handleLocalVideoUpload(event) {
           errMsg = data.error || errMsg;
         } catch (e) {
           if (xhr.status === 413 || (xhr.responseText && xhr.responseText.includes('RequestDataTooBig'))) {
-            errMsg = 'File is too large for the server upload limit.';
+            errMsg = 'File is too large for the server upload limit. Please restart your Django server (python manage.py runserver) to reload settings.';
           } else if (xhr.statusText) {
             errMsg = xhr.statusText;
           }
@@ -2997,10 +2997,10 @@ function handleProfileVideoUpload(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
 
-  const MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB limit
+  const MAX_UPLOAD_BYTES = 10 * 1024 * 1024 * 1024; // 10 GB limit
   if (file.size > MAX_UPLOAD_BYTES) {
     const sizeGb = (file.size / (1024 * 1024 * 1024)).toFixed(2);
-    showToast(`File is too large (${sizeGb} GB). Maximum upload limit is 2 GB.`, '⚠');
+    showToast(`File is too large (${sizeGb} GB). Maximum upload limit is 10 GB.`, '⚠');
     event.target.value = '';
     return;
   }
@@ -3060,7 +3060,7 @@ function handleProfileVideoUpload(event) {
         errMsg = data.error || errMsg;
       } catch (e) {
         if (xhr.status === 413 || (xhr.responseText && xhr.responseText.includes('RequestDataTooBig'))) {
-          errMsg = 'File is too large for the server upload limit.';
+          errMsg = 'File is too large for the server upload limit. Please restart your Django server (python manage.py runserver) to reload settings.';
         } else if (xhr.statusText) {
           errMsg = xhr.statusText;
         }
