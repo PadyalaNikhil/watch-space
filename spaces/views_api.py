@@ -950,7 +950,12 @@ def watch_space_video_upload(request, room_id):
         # Sanitize filename
         clean_name = re.sub(r'[^A-Za-z0-9_.-]', '_', video_file.name)
         room_media_dir = os.path.join(settings.MEDIA_ROOT, 'watch_spaces', str(space.id))
-        os.makedirs(room_media_dir, exist_ok=True)
+        try:
+            os.makedirs(room_media_dir, exist_ok=True)
+        except OSError:
+            import tempfile
+            room_media_dir = os.path.join(tempfile.gettempdir(), 'netflix_media', 'watch_spaces', str(space.id))
+            os.makedirs(room_media_dir, exist_ok=True)
 
         dest_path = os.path.join(room_media_dir, clean_name)
         with open(dest_path, 'wb+') as destination:
@@ -1138,7 +1143,12 @@ def profile_video_upload(request):
         clean_name = re.sub(r'[^A-Za-z0-9_.-]', '_', video_file.name)
 
         user_media_dir = os.path.join(settings.MEDIA_ROOT, 'user_videos', str(user.id))
-        os.makedirs(user_media_dir, exist_ok=True)
+        try:
+            os.makedirs(user_media_dir, exist_ok=True)
+        except OSError:
+            import tempfile
+            user_media_dir = os.path.join(tempfile.gettempdir(), 'netflix_media', 'user_videos', str(user.id))
+            os.makedirs(user_media_dir, exist_ok=True)
 
         dest_path = os.path.join(user_media_dir, f"{int(time.time())}_{clean_name}")
         with open(dest_path, 'wb+') as destination:

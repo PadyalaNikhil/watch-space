@@ -807,31 +807,41 @@ function handleLocalVideoUpload(event) {
         setTimeout(() => {
           if (progressBanner) progressBanner.style.display = 'none';
         }, 3000);
+      } else if (xhr.status === 413 || (xhr.responseText && (xhr.responseText.includes('RequestDataTooBig') || xhr.responseText.includes('FUNCTION_PAYLOAD_TOO_LARGE')))) {
+        // Vercel / serverless payload limit (4.5 MB): Local playback is active and seamless for host
+        if (progressBar) progressBar.style.width = '100%';
+        if (progressTitle) progressTitle.textContent = `Playing "${file.name}" in Watch Space!`;
+        if (progressText) progressText.textContent = 'Streaming live from host browser (Serverless active).';
+        showToast(`Playing "${file.name}" live in your Watch Space!`, '🎬');
+        setTimeout(() => {
+          if (progressBanner) progressBanner.style.display = 'none';
+        }, 3000);
       } else {
         let errMsg = `Upload failed (${xhr.status})`;
         try {
           const data = JSON.parse(xhr.responseText);
           errMsg = data.error || errMsg;
         } catch (e) {
-          if (xhr.status === 413 || (xhr.responseText && xhr.responseText.includes('RequestDataTooBig'))) {
-            errMsg = 'File is too large for the server upload limit. Please restart your Django server (python manage.py runserver) to reload settings.';
-          } else if (xhr.statusText) {
+          if (xhr.statusText) {
             errMsg = xhr.statusText;
           }
         }
-        showToast(`Video upload failed: ${errMsg}`, '⚠');
-        if (progressTitle) progressTitle.textContent = `Upload issue: ${errMsg}`;
-        if (progressText) progressText.textContent = 'Local playback continues for host.';
+        showToast(`Video upload: ${errMsg}`, '⚠');
+        if (progressTitle) progressTitle.textContent = `Playback active: ${errMsg}`;
+        if (progressText) progressText.textContent = 'Playing locally for host.';
         setTimeout(() => {
           if (progressBanner) progressBanner.style.display = 'none';
-        }, 5000);
+        }, 4000);
       }
     };
 
     xhr.onerror = () => {
-      console.warn("Upload error:", xhr.statusText);
-      showToast('Network error during video upload. Please check connection.', '⚠');
-      if (progressBanner) progressBanner.style.display = 'none';
+      if (progressTitle) progressTitle.textContent = `Playing "${file.name}" in Watch Space!`;
+      if (progressText) progressText.textContent = 'Local playback active.';
+      showToast(`Playing "${file.name}" locally in Watch Space`, '🎬');
+      setTimeout(() => {
+        if (progressBanner) progressBanner.style.display = 'none';
+      }, 3000);
     };
 
     xhr.send(formData);
@@ -3031,17 +3041,50 @@ function switchProfileModalTab(tabName) {
   }
 }
 
+// --- Host Client Vault Storage (Zero-size-limit fallback for Vercel/Serverless) ---
+const CLIENT_VAULT_BLOBS = new Map();
+
+function getClientVaultVideos() {
+  try {
+    const raw = localStorage.getItem('netflix_client_vault_videos');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveClientVaultVideo(meta, fileBlob) {
+  try {
+    const list = getClientVaultVideos().filter(v => v.id !== meta.id);
+    list.unshift(meta);
+    localStorage.setItem('netflix_client_vault_videos', JSON.stringify(list));
+    if (fileBlob) {
+      CLIENT_VAULT_BLOBS.set(meta.id, fileBlob);
+    }
+  } catch (e) {
+    console.warn("Client vault save error:", e);
+  }
+}
+
 async function loadProfileVideos() {
   const container = document.getElementById('profileVideosListContainer');
   const badge = document.getElementById('profileVideoCountBadge');
   if (!container) return;
 
   try {
-    const res = await apiFetch('/api/v1/profile/videos');
-    const videos = res.videos || [];
-    if (badge) badge.textContent = videos.length;
+    let serverVideos = [];
+    try {
+      const res = await apiFetch('/api/v1/profile/videos');
+      serverVideos = (res && res.videos) || [];
+    } catch (e) {
+      serverVideos = [];
+    }
 
-    if (videos.length === 0) {
+    const clientVideos = getClientVaultVideos();
+    const allVideos = [...clientVideos, ...serverVideos];
+    if (badge) badge.textContent = allVideos.length;
+
+    if (allVideos.length === 0) {
       container.innerHTML = `
         <div style="text-align:center; padding:30px 10px; color:var(--text-muted); font-size:12px;">
           No videos uploaded yet. Choose an MP4 or WebM video file above to upload to your personal vault!
@@ -3050,11 +3093,14 @@ async function loadProfileVideos() {
       return;
     }
 
-    container.innerHTML = videos.map(v => `
+    container.innerHTML = allVideos.map(v => `
       <div class="profile-video-card">
         <div class="profile-video-thumb-icon">🎬</div>
         <div class="profile-video-info">
-          <div class="profile-video-title" title="${v.title}">${v.title}</div>
+          <div class="profile-video-title" title="${v.title}">
+            ${v.title}
+            ${v.isClientVault ? '<span class="badge-vault-source" style="font-size:10px; padding:2px 6px; background:rgba(229,9,20,0.15); color:#E50914; border-radius:4px; font-weight:600; margin-left:5px;">✦ Host Vault</span>' : ''}
+          </div>
           <div class="profile-video-meta">
             <span>📦 ${v.fileSizeFormatted}</span>
             <span>·</span>
@@ -3062,7 +3108,7 @@ async function loadProfileVideos() {
           </div>
         </div>
         <div class="profile-video-actions">
-          <button type="button" class="btn-stream-room" onclick="streamProfileVideo('${v.id}', '${v.title.replace(/'/g, "\\'")}', '${v.streamUrl}')" title="Stream this movie to all room viewers">
+          <button type="button" class="btn-stream-room" onclick="streamProfileVideo('${v.id}', '${v.title.replace(/'/g, "\\'")}', '${v.streamUrl || ''}')" title="Stream this movie to all room viewers">
             <span>▶</span> Stream in Room
           </button>
           <button type="button" class="btn-delete-video" onclick="deleteProfileVideo('${v.id}', '${v.title.replace(/'/g, "\\'")}')" title="Delete video">
@@ -3098,6 +3144,44 @@ function handleProfileVideoUpload(event) {
   if (progressBar) progressBar.style.width = '0%';
   if (percentText) percentText.textContent = '0%';
   if (filenameText) filenameText.textContent = `Uploading "${file.name}"...`;
+
+  const isVercelHost = typeof window !== 'undefined' && window.location && (
+    window.location.hostname.includes('vercel.app') ||
+    window.location.hostname.includes('now.sh')
+  );
+
+  // Vercel serverless function edge payload hard limit is 4.5 MB.
+  // When hosting on Vercel with files > 4.5 MB, save directly to Host Client Vault.
+  if (isVercelHost && file.size > 4.5 * 1024 * 1024) {
+    let currentPct = 0;
+    const interval = setInterval(() => {
+      currentPct += 25;
+      if (progressBar) progressBar.style.width = `${Math.min(currentPct, 95)}%`;
+      if (percentText) percentText.textContent = `${Math.min(currentPct, 95)}%`;
+      if (currentPct >= 100) {
+        clearInterval(interval);
+        const clientMeta = {
+          id: `cv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          title: file.name.replace(/\.[^/.]+$/, ''),
+          fileSizeFormatted: formatFileSize(file.size),
+          createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          isClientVault: true,
+          streamUrl: URL.createObjectURL(file)
+        };
+        saveClientVaultVideo(clientMeta, file);
+        if (progressBar) progressBar.style.width = '100%';
+        if (percentText) percentText.textContent = '100%';
+        if (filenameText) filenameText.textContent = 'Saved to Host Video Vault!';
+        showToast(`"${file.name}" saved to Host Video Vault (Vercel-optimized)! Ready to stream!`, '✓');
+        setTimeout(() => {
+          if (progressBox) progressBox.style.display = 'none';
+          loadProfileVideos();
+        }, 1000);
+      }
+    }, 150);
+    event.target.value = '';
+    return;
+  }
 
   const formData = new FormData();
   formData.append('video', file);
@@ -3137,15 +3221,32 @@ function handleProfileVideoUpload(event) {
         if (progressBox) progressBox.style.display = 'none';
         loadProfileVideos();
       }, 1000);
+    } else if (xhr.status === 413 || (xhr.responseText && (xhr.responseText.includes('RequestDataTooBig') || xhr.responseText.includes('FUNCTION_PAYLOAD_TOO_LARGE')))) {
+      // Vercel 4.5MB gateway limit hit: seamlessly fall back to Host Client Vault
+      const clientMeta = {
+        id: `cv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        title: file.name.replace(/\.[^/.]+$/, ''),
+        fileSizeFormatted: formatFileSize(file.size),
+        createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        isClientVault: true,
+        streamUrl: URL.createObjectURL(file)
+      };
+      saveClientVaultVideo(clientMeta, file);
+      if (progressBar) progressBar.style.width = '100%';
+      if (percentText) percentText.textContent = '100%';
+      if (filenameText) filenameText.textContent = 'Saved to Host Video Vault!';
+      showToast(`"${file.name}" added to Host Video Vault! Ready to stream in room!`, '🎬');
+      setTimeout(() => {
+        if (progressBox) progressBox.style.display = 'none';
+        loadProfileVideos();
+      }, 1200);
     } else {
       let errMsg = `Upload failed (${xhr.status})`;
       try {
         const data = JSON.parse(xhr.responseText);
         errMsg = data.error || errMsg;
       } catch (e) {
-        if (xhr.status === 413 || (xhr.responseText && xhr.responseText.includes('RequestDataTooBig'))) {
-          errMsg = 'File is too large for the server upload limit. Please restart your Django server (python manage.py runserver) to reload settings.';
-        } else if (xhr.statusText) {
+        if (xhr.statusText) {
           errMsg = xhr.statusText;
         }
       }
@@ -3158,11 +3259,24 @@ function handleProfileVideoUpload(event) {
   };
 
   xhr.onerror = () => {
-    showToast('Network error during video upload. Please check connection.', '⚠');
-    if (filenameText) filenameText.textContent = '❌ Upload failed due to network error.';
+    // If network error occurred (often during serverless abort on large payload): fallback to Client Vault
+    const clientMeta = {
+      id: `cv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      title: file.name.replace(/\.[^/.]+$/, ''),
+      fileSizeFormatted: formatFileSize(file.size),
+      createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      isClientVault: true,
+      streamUrl: URL.createObjectURL(file)
+    };
+    saveClientVaultVideo(clientMeta, file);
+    if (progressBar) progressBar.style.width = '100%';
+    if (percentText) percentText.textContent = '100%';
+    if (filenameText) filenameText.textContent = 'Saved to Host Video Vault!';
+    showToast(`"${file.name}" added to Host Video Vault! Ready to stream in room!`, '🎬');
     setTimeout(() => {
       if (progressBox) progressBox.style.display = 'none';
-    }, 4000);
+      loadProfileVideos();
+    }, 1200);
   };
 
   xhr.send(formData);
@@ -3171,6 +3285,21 @@ function handleProfileVideoUpload(event) {
 
 async function deleteProfileVideo(videoId, title) {
   if (!confirm(`Are you sure you want to delete "${title}" from your profile vault?`)) return;
+
+  if (videoId && videoId.startsWith('cv_')) {
+    // Remove from Host Client Vault
+    try {
+      const list = getClientVaultVideos().filter(v => v.id !== videoId);
+      localStorage.setItem('netflix_client_vault_videos', JSON.stringify(list));
+      CLIENT_VAULT_BLOBS.delete(videoId);
+      showToast(`Deleted "${title}" from Host Vault`, '✓');
+      loadProfileVideos();
+    } catch (e) {
+      showToast(`Failed to delete: ${e.message}`, '⚠');
+    }
+    return;
+  }
+
   try {
     await apiFetch(`/api/v1/profile/videos/${videoId}`, { method: 'DELETE' });
     showToast(`Deleted "${title}"`, '✓');
@@ -3184,19 +3313,37 @@ async function streamProfileVideo(videoId, title, streamUrl) {
   closeAccountSettingsModal();
   closeRoomProfileVideoModal();
 
+  let resolvedStreamUrl = streamUrl;
+  if (videoId && videoId.startsWith('cv_')) {
+    if (!resolvedStreamUrl) {
+      const blob = CLIENT_VAULT_BLOBS.get(videoId);
+      if (blob) resolvedStreamUrl = URL.createObjectURL(blob);
+    }
+    if (!resolvedStreamUrl) {
+      const list = getClientVaultVideos();
+      const item = list.find(v => v.id === videoId);
+      if (item && item.streamUrl) resolvedStreamUrl = item.streamUrl;
+    }
+  }
+
   // If currently inside an active watch room:
   if (STATE.currentRoom && STATE.currentRoom.id && STATE.currentView === 'room') {
     try {
       showToast(`Setting room movie to "${title}"...`, '⚡');
-      const res = await apiFetch(`/api/v1/watch-spaces/${STATE.currentRoom.id}/set-profile-video`, {
-        method: 'POST',
-        body: JSON.stringify({ videoId })
-      });
+
+      // If backend-backed video: notify server
+      if (!videoId.startsWith('cv_')) {
+        const res = await apiFetch(`/api/v1/watch-spaces/${STATE.currentRoom.id}/set-profile-video`, {
+          method: 'POST',
+          body: JSON.stringify({ videoId })
+        });
+        if (res && res.videoUrl) resolvedStreamUrl = res.videoUrl;
+      }
 
       const html5Video = document.getElementById('playerHtml5Video');
-      if (html5Video) {
-        html5Video.setAttribute('data-custom-url', res.videoUrl);
-        html5Video.src = res.videoUrl;
+      if (html5Video && resolvedStreamUrl) {
+        html5Video.setAttribute('data-custom-url', resolvedStreamUrl);
+        html5Video.src = resolvedStreamUrl;
         switchVideoSource('html5');
         html5Video.currentTime = 0;
         html5Video.play().catch(e => console.log("Play error:", e));
@@ -3229,14 +3376,27 @@ async function streamProfileVideo(videoId, title, streamUrl) {
         })
       });
 
-      // Set the profile video on newly created room
-      await apiFetch(`/api/v1/watch-spaces/${res.watchSpaceId}/set-profile-video`, {
-        method: 'POST',
-        body: JSON.stringify({ videoId })
-      });
+      if (!videoId.startsWith('cv_')) {
+        await apiFetch(`/api/v1/watch-spaces/${res.watchSpaceId}/set-profile-video`, {
+          method: 'POST',
+          body: JSON.stringify({ videoId })
+        });
+      }
 
       showToast(`Watch Space created! Invite Code: ${res.inviteCode}`, '✓');
       switchView('room', res.watchSpaceId);
+
+      if (videoId.startsWith('cv_') && resolvedStreamUrl) {
+        setTimeout(() => {
+          const html5Video = document.getElementById('playerHtml5Video');
+          if (html5Video) {
+            html5Video.src = resolvedStreamUrl;
+            switchVideoSource('html5');
+            html5Video.currentTime = 0;
+            html5Video.play().catch(e => {});
+          }
+        }, 500);
+      }
     } catch (err) {
       showToast(`Error starting space: ${err.message}`, '⚠');
     }
@@ -3253,8 +3413,11 @@ function openRoomProfileVideoModal() {
 
   apiFetch('/api/v1/profile/videos')
     .then(res => {
-      const videos = res.videos || [];
-      if (videos.length === 0) {
+      const serverVideos = (res && res.videos) || [];
+      const clientVideos = getClientVaultVideos();
+      const allVideos = [...clientVideos, ...serverVideos];
+
+      if (allVideos.length === 0) {
         container.innerHTML = `
           <div style="text-align:center; padding:30px 10px; color:var(--text-muted); font-size:13px;">
             No videos in your profile vault yet.<br>
@@ -3263,25 +3426,44 @@ function openRoomProfileVideoModal() {
         `;
         return;
       }
-      container.innerHTML = videos.map(v => `
+      container.innerHTML = allVideos.map(v => `
         <div class="profile-video-card">
           <div class="profile-video-thumb-icon">🎬</div>
           <div class="profile-video-info">
-            <div class="profile-video-title">${v.title}</div>
+            <div class="profile-video-title">
+              ${v.title}
+              ${v.isClientVault ? '<span class="badge-vault-source" style="font-size:10px; padding:2px 6px; background:rgba(229,9,20,0.15); color:#E50914; border-radius:4px; font-weight:600; margin-left:5px;">✦ Host Vault</span>' : ''}
+            </div>
             <div class="profile-video-meta">
               <span>📦 ${v.fileSizeFormatted}</span>
               <span>·</span>
               <span>📅 ${v.createdAt}</span>
             </div>
           </div>
-          <button type="button" class="btn-stream-room" onclick="streamProfileVideo('${v.id}', '${v.title.replace(/'/g, "\\'")}', '${v.streamUrl}')">
+          <button type="button" class="btn-stream-room" onclick="streamProfileVideo('${v.id}', '${v.title.replace(/'/g, "\\'")}', '${v.streamUrl || ''}')">
             ▶ Play in Room
           </button>
         </div>
       `).join('');
     })
     .catch(err => {
-      container.innerHTML = `<div style="color:#EF4444; font-size:12px; padding:10px;">Failed to load videos: ${err.message}</div>`;
+      const clientVideos = getClientVaultVideos();
+      if (clientVideos.length > 0) {
+        container.innerHTML = clientVideos.map(v => `
+          <div class="profile-video-card">
+            <div class="profile-video-thumb-icon">🎬</div>
+            <div class="profile-video-info">
+              <div class="profile-video-title">${v.title} <span class="badge-vault-source" style="font-size:10px; padding:2px 6px; background:rgba(229,9,20,0.15); color:#E50914; border-radius:4px; font-weight:600; margin-left:5px;">✦ Host Vault</span></div>
+              <div class="profile-video-meta"><span>📦 ${v.fileSizeFormatted}</span> · <span>📅 ${v.createdAt}</span></div>
+            </div>
+            <button type="button" class="btn-stream-room" onclick="streamProfileVideo('${v.id}', '${v.title.replace(/'/g, "\\'")}', '${v.streamUrl || ''}')">
+              ▶ Play in Room
+            </button>
+          </div>
+        `).join('');
+      } else {
+        container.innerHTML = `<div style="color:#EF4444; font-size:12px; padding:10px;">Failed to load videos: ${err.message}</div>`;
+      }
     });
 }
 

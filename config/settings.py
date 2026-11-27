@@ -169,6 +169,27 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+if os.environ.get('VERCEL'):
+    MEDIA_ROOT = Path('/tmp/netflix_media')
+try:
+    MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+except Exception:
+    import tempfile
+    MEDIA_ROOT = Path(tempfile.gettempdir()) / 'netflix_media'
+    MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+
+# Production Reverse Proxy & CSRF configuration
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.vercel.app',
+    'https://*.onrender.com',
+    'https://*.railway.app',
+    'https://*.herokuapp.com',
+    'http://localhost',
+    'http://localhost:*',
+    'http://127.0.0.1',
+    'http://127.0.0.1:*',
+]
 
 # Large file and video upload support:
 # Disables Django's request body size cap (DATA_UPLOAD_MAX_MEMORY_SIZE = None)
