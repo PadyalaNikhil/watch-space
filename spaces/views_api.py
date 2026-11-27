@@ -907,12 +907,24 @@ def watch_space_playback(request, room_id):
     return JsonResponse(result)
 
 
+def format_file_size(size_bytes):
+    """Formats file size into human-readable B, KB, MB, or GB string."""
+    if size_bytes >= 1024 * 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+    elif size_bytes >= 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
+    elif size_bytes >= 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    return f"{size_bytes} B"
+
+
 @csrf_exempt
 def watch_space_video_upload(request, room_id):
     """
     Host uploads a local movie/video file to share with all viewers in the room.
     The file is saved under media/watch_spaces/<room_id>/ and synchronized
     via active_variation['custom_video'] and heartbeat sync.
+    Supports video files up to 2 GB.
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -921,6 +933,12 @@ def watch_space_video_upload(request, room_id):
     video_file = request.FILES.get('video') or request.FILES.get('file')
     if not video_file:
         return JsonResponse({'error': 'No video file provided.'}, status=400)
+
+    # Validate file size up to 2 GB
+    MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024  # 2 GB limit
+    if video_file.size > MAX_FILE_SIZE:
+        size_gb = video_file.size / (1024 * 1024 * 1024)
+        return JsonResponse({'error': f'File exceeds maximum allowed size of 2 GB (selected file is {size_gb:.2f} GB).'}, status=400)
 
     try:
         # Sanitize filename
@@ -959,7 +977,8 @@ def watch_space_video_upload(request, room_id):
             'success': True,
             'videoUrl': stream_url,
             'fileName': video_file.name,
-            'fileSize': video_file.size
+            'fileSize': video_file.size,
+            'fileSizeFormatted': format_file_size(video_file.size)
         })
     except Exception as e:
         return JsonResponse({'error': f'Video upload failed: {str(e)}'}, status=500)
@@ -1062,7 +1081,7 @@ def profile_videos_list(request):
             'title': v.title,
             'filename': v.filename,
             'fileSize': v.file_size,
-            'fileSizeFormatted': f"{v.file_size / (1024 * 1024):.1f} MB" if v.file_size >= 1048576 else f"{v.file_size / 1024:.1f} KB",
+            'fileSizeFormatted': format_file_size(v.file_size),
             'streamUrl': f"/api/v1/profile/videos/{v.id}/stream",
             'contentType': v.content_type,
             'createdAt': v.created_at.strftime("%b %d, %Y %I:%M %p")
@@ -1076,6 +1095,7 @@ def profile_video_upload(request):
     Host uploads a movie/video into their private profile account.
     Stored securely under media/user_videos/<user_id>/.
     Only visible in the host's profile, but can be chosen to stream to room visitors.
+    Supports video files up to 2 GB.
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -1089,6 +1109,12 @@ def profile_video_upload(request):
     video_file = request.FILES.get('video') or request.FILES.get('file')
     if not video_file:
         return JsonResponse({'error': 'No video file provided.'}, status=400)
+
+    # Validate file size up to 2 GB
+    MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024  # 2 GB limit
+    if video_file.size > MAX_FILE_SIZE:
+        size_gb = video_file.size / (1024 * 1024 * 1024)
+        return JsonResponse({'error': f'File exceeds maximum allowed size of 2 GB (selected file is {size_gb:.2f} GB).'}, status=400)
 
     try:
         title = request.POST.get('title', '').strip() or os.path.splitext(video_file.name)[0]
@@ -1118,7 +1144,7 @@ def profile_video_upload(request):
                 'title': user_video.title,
                 'filename': user_video.filename,
                 'fileSize': user_video.file_size,
-                'fileSizeFormatted': f"{user_video.file_size / (1024 * 1024):.1f} MB" if user_video.file_size >= 1048576 else f"{user_video.file_size / 1024:.1f} KB",
+                'fileSizeFormatted': format_file_size(user_video.file_size),
                 'streamUrl': f"/api/v1/profile/videos/{user_video.id}/stream",
                 'createdAt': user_video.created_at.strftime("%b %d, %Y %I:%M %p")
             }

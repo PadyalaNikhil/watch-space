@@ -170,8 +170,8 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Large file and video upload support (up to 2 GB)
-DATA_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024 * 1024  # 2 GB request body size limit
+# Large file and video upload support (up to 2 GB with multipart envelope overhead buffer)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 2600 * 1024 * 1024      # ~2.5 GB request body allowance to comfortably support 2 GB files
 FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024        # 50 MB in RAM before temporary disk spooling
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
 FILE_UPLOAD_PERMISSIONS = 0o644

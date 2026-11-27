@@ -699,9 +699,31 @@ function triggerLocalVideoUpload() {
   if (input) input.click();
 }
 
+function formatFileSize(bytes) {
+  if (!bytes || bytes <= 0) return '0 B';
+  if (bytes >= 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  }
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  if (bytes >= 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  return `${bytes} B`;
+}
+
 function handleLocalVideoUpload(event) {
-  const file = event.target.files[0];
+  const file = event.target.files && event.target.files[0];
   if (!file) return;
+
+  const MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB limit
+  if (file.size > MAX_UPLOAD_BYTES) {
+    const sizeGb = (file.size / (1024 * 1024 * 1024)).toFixed(2);
+    showToast(`File is too large (${sizeGb} GB). Maximum upload limit is 2 GB.`, '⚠');
+    event.target.value = '';
+    return;
+  }
 
   const objectUrl = URL.createObjectURL(file);
   const html5Video = document.getElementById('playerHtml5Video');
@@ -750,9 +772,9 @@ function handleLocalVideoUpload(event) {
       if (e.lengthComputable) {
         const percent = Math.round((e.loaded / e.total) * 100);
         if (progressBar) progressBar.style.width = `${percent}%`;
-        const loadedMb = (e.loaded / (1024 * 1024)).toFixed(1);
-        const totalMb = (e.total / (1024 * 1024)).toFixed(1);
-        if (progressText) progressText.textContent = `Uploading ${percent}% (${loadedMb}MB / ${totalMb}MB)`;
+        const loadedStr = formatFileSize(e.loaded);
+        const totalStr = formatFileSize(e.total);
+        if (progressText) progressText.textContent = `Uploading ${percent}% (${loadedStr} / ${totalStr})`;
       }
     };
 
@@ -2975,6 +2997,14 @@ function handleProfileVideoUpload(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
 
+  const MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB limit
+  if (file.size > MAX_UPLOAD_BYTES) {
+    const sizeGb = (file.size / (1024 * 1024 * 1024)).toFixed(2);
+    showToast(`File is too large (${sizeGb} GB). Maximum upload limit is 2 GB.`, '⚠');
+    event.target.value = '';
+    return;
+  }
+
   const progressBox = document.getElementById('profileUploadProgressBox');
   const progressBar = document.getElementById('profileUploadProgressBar');
   const percentText = document.getElementById('profileUploadPercent');
@@ -3007,9 +3037,9 @@ function handleProfileVideoUpload(event) {
       const pct = Math.round((e.loaded / e.total) * 100);
       if (progressBar) progressBar.style.width = `${pct}%`;
       if (percentText) percentText.textContent = `${pct}%`;
-      const loadedMb = (e.loaded / (1024 * 1024)).toFixed(1);
-      const totalMb = (e.total / (1024 * 1024)).toFixed(1);
-      if (filenameText) filenameText.textContent = `Uploading "${file.name}" (${loadedMb}MB / ${totalMb}MB)...`;
+      const loadedStr = formatFileSize(e.loaded);
+      const totalStr = formatFileSize(e.total);
+      if (filenameText) filenameText.textContent = `Uploading "${file.name}" (${loadedStr} / ${totalStr})...`;
     }
   };
 
