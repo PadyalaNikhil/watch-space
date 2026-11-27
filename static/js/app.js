@@ -55,12 +55,12 @@ const STATE = {
 };
 
 // --- Helpers ---
-function formatTime(seconds) {
+function formatTime(seconds, forceHours = false) {
   const sec = Math.max(0, Math.floor(seconds || 0));
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
   const s = sec % 60;
-  if (h > 0) {
+  if (h > 0 || forceHours) {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
@@ -725,6 +725,7 @@ function handleLocalVideoUpload(event) {
     return;
   }
 
+  bindHtml5VideoEvents();
   const objectUrl = URL.createObjectURL(file);
   const html5Video = document.getElementById('playerHtml5Video');
   if (html5Video) {
@@ -735,6 +736,25 @@ function handleLocalVideoUpload(event) {
     html5Video.play().catch(e => console.log("Local video play error:", e));
     showToast(`Playing local movie: ${file.name}`, '🎬');
   }
+
+  // Pre-detect exact duration from local video metadata immediately
+  try {
+    const tempDurVideo = document.createElement('video');
+    tempDurVideo.preload = 'metadata';
+    tempDurVideo.onloadedmetadata = function() {
+      if (tempDurVideo.duration && !isNaN(tempDurVideo.duration) && isFinite(tempDurVideo.duration)) {
+        const dur = Math.round(tempDurVideo.duration);
+        if (dur > 0) {
+          console.log(`[Upload] Pre-detected video duration: ${dur}s`);
+          STATE.playback.duration = dur;
+          if (STATE.currentTrack) STATE.currentTrack.duration = dur;
+          updatePlayerUI();
+          renderScrubberMarkers(STATE.currentTrack);
+        }
+      }
+    };
+    tempDurVideo.src = objectUrl;
+  } catch (e) {}
 
   STATE.isHostingLocalFile = true;
   STATE.localFileName = file.name;
@@ -839,9 +859,58 @@ function hideCenterPlayOverlay() {
   if (overlay) overlay.style.display = 'none';
 }
 
+// Automatically detect real video duration from loaded video metadata and synchronize UI
+function syncVideoDurationFromMedia() {
+  const html5Video = document.getElementById('playerHtml5Video');
+  if (!html5Video) return;
+  const dur = html5Video.duration;
+  if (dur && !isNaN(dur) && isFinite(dur) && dur > 0) {
+    const actualDuration = Math.round(dur);
+    if (actualDuration > 0 && Math.abs(STATE.playback.duration - actualDuration) >= 1) {
+      console.log(`[Player] Auto-detected video duration: ${actualDuration}s (was ${STATE.playback.duration}s)`);
+      STATE.playback.duration = actualDuration;
+      if (STATE.currentTrack) {
+        STATE.currentTrack.duration = actualDuration;
+      }
+      updatePlayerUI();
+      renderScrubberMarkers(STATE.currentTrack);
+
+      // If host of active watch room, synchronize duration update to all visitors via playback API
+      if (STATE.currentRoom && STATE.currentRoom.id && (STATE.currentUser.role === 'host' || isHost())) {
+        apiFetch(`/api/v1/watch-spaces/${STATE.currentRoom.id}/playback`, {
+          method: 'POST',
+          body: JSON.stringify({
+            state: STATE.playback.isPlaying ? 'play' : 'pause',
+            positionSeconds: STATE.playback.currentTs || 0,
+            durationSeconds: actualDuration
+          })
+        }).catch(err => console.warn('[Player] Duration sync to server ignored:', err.message));
+      }
+    }
+  }
+}
+
+function bindHtml5VideoEvents() {
+  const html5Video = document.getElementById('playerHtml5Video');
+  if (!html5Video || html5Video._durationSyncBound) return;
+  html5Video._durationSyncBound = true;
+
+  html5Video.addEventListener('loadedmetadata', syncVideoDurationFromMedia);
+  html5Video.addEventListener('durationchange', syncVideoDurationFromMedia);
+  html5Video.addEventListener('canplay', syncVideoDurationFromMedia);
+}
+
 function handleHtml5TimeUpdate() {
   const html5Video = document.getElementById('playerHtml5Video');
   if (html5Video && STATE.currentVideoSource === 'html5') {
+    // If duration not yet synced, sync from live element
+    if (html5Video.duration && !isNaN(html5Video.duration) && isFinite(html5Video.duration) && html5Video.duration > 0) {
+      const dur = Math.round(html5Video.duration);
+      if (Math.abs(STATE.playback.duration - dur) >= 1) {
+        syncVideoDurationFromMedia();
+      }
+    }
+
     const videoTs = Math.floor(html5Video.currentTime);
     if (Math.abs(videoTs - STATE.playback.currentTs) > 2) {
       STATE.playback.currentTs = videoTs;
@@ -853,7 +922,7 @@ function handleHtml5TimeUpdate() {
 }
 
 function handleVideoEnded() {
-  showToast("Scene ended. Replaying scene...", "✓");
+  showToast("Video ended. Replaying video...", "✓");
   seekTo(0);
 }
 
@@ -882,6 +951,10 @@ async function loadWatchRoom(roomIdOrCode) {
     STATE.currentTrack = track;
 
     STATE.playback.duration = (room.title && room.title.durationSeconds) ? room.title.durationSeconds : track.duration;
+    if (room.playback && room.playback.customVideo && room.playback.customVideo.duration) {
+      STATE.playback.duration = room.playback.customVideo.duration;
+    }
+    bindHtml5VideoEvents();
     STATE.playback.currentTs = (room.playback && room.playback.currentPlaybackTs !== undefined && room.playback.currentPlaybackTs !== null) 
       ? room.playback.currentPlaybackTs 
       : 0;
@@ -1100,8 +1173,12 @@ function startPlaybackLoop() {
   STATE.timerInterval = setInterval(() => {
     if (STATE.playback.isPlaying) {
       STATE.playback.currentTs += 1;
-      if (STATE.playback.currentTs > STATE.playback.duration) {
+      if (STATE.playback.currentTs >= STATE.playback.duration) {
         STATE.playback.currentTs = 0;
+        const html5Video = document.getElementById('playerHtml5Video');
+        if (html5Video && STATE.currentVideoSource === 'html5') {
+          try { html5Video.currentTime = 0; } catch (e) {}
+        }
       }
       updatePlayerUI();
       updateMovieSubtitle(Math.floor(STATE.playback.currentTs));
@@ -1113,11 +1190,12 @@ function startPlaybackLoop() {
 function updatePlayerUI() {
   const current = STATE.playback.currentTs;
   const duration = STATE.playback.duration || 4560;
+  const hasHours = duration >= 3600;
 
-  // Time display
+  // Time display (symmetrically adapts: e.g. 00:15 / 01:00 for 1-min video or 00:00:15 / 01:30:00 for movie)
   const timeDisplay = document.getElementById('playerTimeDisplay');
   if (timeDisplay) {
-    timeDisplay.textContent = `${formatTime(current)} / ${formatTime(duration)}`;
+    timeDisplay.textContent = `${formatTime(current, hasHours)} / ${formatTime(duration, hasHours)}`;
   }
 
   // Scrubber fill
@@ -1479,6 +1557,12 @@ function startSyncHeartbeat() {
       }
 
       // Check for Host-shared custom video
+      if (res.customVideo) {
+        if (res.customVideo.duration && res.customVideo.duration > 0 && Math.abs(STATE.playback.duration - res.customVideo.duration) >= 1) {
+          STATE.playback.duration = res.customVideo.duration;
+          updatePlayerUI();
+        }
+      }
       if (res.customVideo && res.customVideo.url) {
         const html5Video = document.getElementById('playerHtml5Video');
         if (html5Video && !STATE.isHostingLocalFile) {
@@ -3978,11 +4062,14 @@ document.addEventListener('DOMContentLoaded', () => {
     loginForm.addEventListener('submit', handleAuthLogin);
   }
 
+  // Bind video metadata sync events
+  bindHtml5VideoEvents();
+
   // Authentication Initialization
   const isPlaywrightCli = !!window.__PLAYWRIGHT_E2E__ || (typeof navigator !== 'undefined' && (navigator.webdriver === true || (navigator.userAgent && navigator.userAgent.includes('Playwright'))));
-  const isLoggedOut = localStorage.getItem('isLoggedOut') === 'true';
+  const isUnauthTest = !!window.__TEST_UNAUTHENTICATED__;
 
-  if (isPlaywrightCli && !isLoggedOut) {
+  if (isPlaywrightCli && !isUnauthTest) {
     // Under automated test runner CLI, authenticate as test persona for feature testing
     STATE.isAuthenticated = true;
     STATE.token = 'e2e_playwright_auth_token';
@@ -4034,7 +4121,7 @@ document.addEventListener('DOMContentLoaded', () => {
     switchView('room', initialRoom);
   } else if (summaryMatch) {
     switchView('summary', summaryMatch[1]);
-  } else if (isPlaywrightCli && !isLoggedOut && !pathname.includes('/auth')) {
+  } else if (isPlaywrightCli && !isUnauthTest && !pathname.includes('/auth')) {
     // Automated test runner navigating to '/' for home suite
     switchView('home');
   } else {
@@ -4054,6 +4141,8 @@ window.saveAccountSettings = saveAccountSettings;
 window.logoutCurrentUser = logoutCurrentUser;
 window.switchAuthTab = switchAuthTab;
 window.fillDemoLogin = fillDemoLogin;
+window.syncVideoDurationFromMedia = syncVideoDurationFromMedia;
+window.bindHtml5VideoEvents = bindHtml5VideoEvents;
 window.handleAuthLogin = handleAuthLogin;
 window.handleAuthRegister = handleAuthRegister;
 window.handleVerifySignupOtp = handleVerifySignupOtp;

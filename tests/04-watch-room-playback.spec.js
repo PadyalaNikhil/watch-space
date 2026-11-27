@@ -65,4 +65,28 @@ test.describe('Watch Room Video Player & Synchronization', () => {
     const synthBtn = page.locator('#audioToggleBtn');
     await expect(synthBtn).toBeVisible();
   });
+
+  test('TC-16b: Video player automatically detects and adapts playback duration from video metadata', async ({ page }) => {
+    const timeDisplay = page.locator('#playerTimeDisplay');
+    await expect(timeDisplay).toBeVisible();
+
+    // Simulate 1-minute (60 seconds) custom video metadata detection
+    await page.evaluate(() => {
+      const html5Video = document.getElementById('playerHtml5Video');
+      if (html5Video) {
+        Object.defineProperty(html5Video, 'duration', {
+          configurable: true,
+          get: () => 60
+        });
+        window.syncVideoDurationFromMedia();
+      }
+    });
+
+    // Expect player time display to automatically update from 1h 30m down to 1 minute: "00:00 / 01:00"
+    await expect(timeDisplay).toHaveText(/00:00\s*\/\s*01:00/);
+
+    // Verify STATE.playback.duration is 60
+    const duration = await page.evaluate(() => window.STATE.playback.duration);
+    expect(duration).toBe(60);
+  });
 });

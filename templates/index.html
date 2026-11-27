@@ -470,6 +470,8 @@
               poster="/static/images/backdrop-stranger-things.svg"
               onended="handleVideoEnded()"
               ontimeupdate="handleHtml5TimeUpdate()"
+              onloadedmetadata="syncVideoDurationFromMedia()"
+              ondurationchange="syncVideoDurationFromMedia()"
               onclick="togglePlayPause()">
               <source id="playerHtml5Source" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4" type="video/mp4" />
             </video>

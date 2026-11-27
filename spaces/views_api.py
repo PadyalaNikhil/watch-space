@@ -899,8 +899,9 @@ def watch_space_playback(request, room_id):
     data = json_body(request)
     state = data.get('state', 'play')
     position = float(data.get('positionSeconds', space.current_playback_ts))
+    duration_sec = data.get('durationSeconds')
 
-    result = SyncEngine.update_playback_state(space, user, state, position)
+    result = SyncEngine.update_playback_state(space, user, state, position, duration_seconds=duration_sec)
     if not result.get('success'):
         return JsonResponse(result, status=403)
 
@@ -956,12 +957,19 @@ def watch_space_video_upload(request, room_id):
             for chunk in video_file.chunks():
                 destination.write(chunk)
 
+        duration_val = request.POST.get('duration')
+        try:
+            dur_sec = max(1, int(float(duration_val))) if duration_val else 0
+        except (ValueError, TypeError):
+            dur_sec = 0
+
         stream_url = f'/api/v1/watch-spaces/{space.id}/video/stream'
         custom_video_info = {
             'url': stream_url,
             'name': video_file.name,
             'size': video_file.size,
-            'filename': clean_name
+            'filename': clean_name,
+            'duration': dur_sec
         }
 
         if not space.active_variation:
@@ -1137,12 +1145,19 @@ def profile_video_upload(request):
             for chunk in video_file.chunks():
                 destination.write(chunk)
 
+        duration_val = request.POST.get('duration')
+        try:
+            dur_sec = max(1, int(float(duration_val))) if duration_val else 0
+        except (ValueError, TypeError):
+            dur_sec = 0
+
         user_video = UserVideo.objects.create(
             user=user,
             title=title,
             filename=video_file.name,
             file_path=dest_path,
             file_size=video_file.size,
+            duration_seconds=dur_sec,
             content_type=video_file.content_type or 'video/mp4'
         )
 
@@ -1284,6 +1299,7 @@ def watch_space_set_profile_video(request, room_id):
         'name': video.title,
         'size': video.file_size,
         'videoId': str(video.id),
+        'duration': video.duration_seconds or 0,
         'isHostProfileVideo': True
     }
 

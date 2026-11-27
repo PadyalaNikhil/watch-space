@@ -58,10 +58,11 @@ class SyncEngine:
         room: WatchSpace,
         user: WatchUser,
         state: str,
-        position_seconds: float
+        position_seconds: float,
+        duration_seconds: Optional[float] = None
     ) -> Dict[str, Any]:
         """
-        Processes authoritative playback changes (play/pause/seek).
+        Processes authoritative playback changes (play/pause/seek) and duration updates.
         Server-side RBAC: Only Host is permitted to alter authoritative playback!
         """
         if room.host_id != user.id:
@@ -75,7 +76,20 @@ class SyncEngine:
             room.is_playing = True
         elif state == "pause":
             room.is_playing = False
-        room.save(update_fields=['current_playback_ts', 'is_playing'])
+
+        update_fields = ['current_playback_ts', 'is_playing']
+
+        # Update custom video duration if provided and room is playing a custom/shared video
+        if duration_seconds is not None:
+            try:
+                dur_int = max(1, int(float(duration_seconds)))
+                if room.active_variation and isinstance(room.active_variation, dict) and 'custom_video' in room.active_variation:
+                    room.active_variation['custom_video']['duration'] = dur_int
+                    update_fields.append('active_variation')
+            except (ValueError, TypeError):
+                pass
+
+        room.save(update_fields=update_fields)
 
         # Create system notification in chat history
         action_text = f"started playback for everyone · {int(position_seconds)//60:02d}:{int(position_seconds)%60:02d}" if state == "play" else f"paused playback at {int(position_seconds)//60:02d}:{int(position_seconds)%60:02d}"
